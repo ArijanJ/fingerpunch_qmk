@@ -7,6 +7,10 @@ BOOTLOADER = rp2040
 # LTO must be disabled for RP2040 builds
 LTO_ENABLE = no
 
+FP_TRACKBALL_ENABLE=yes
+FP_EC11=yes
+AUDIO_ENABLE=yes
+
 # Build Options
 #   change yes to no to disable
 #

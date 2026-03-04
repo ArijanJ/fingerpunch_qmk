@@ -4,6 +4,9 @@ AUDIO_DRIVER = pwm_hardware
 HAPTIC_ENABLE ?= no
 HAPTIC_DRIVER = drv2605l
 
+FP_TRACKBALL_ENABLE = yes
+FP_EC11 = yes
+
 VIK_ENABLE = yes
 
 ifeq ($(strip $(FP_INDICATOR_LEDS)), yes)
