@@ -9,10 +9,7 @@
 //     _ADJUST
 // };
 
-enum encoder_sides {
-    ENC_LEFT = 0,
-    ENC_RIGHT
-};
+enum encoder_sides { ENC_LEFT = 0, ENC_RIGHT };
 
 enum keymap_layers {
     LAYER_BASE = 0,
@@ -56,7 +53,7 @@ enum keymap_layers {
 #define HRA(x) MT(MOD_LALT, x)
 #define HRG(x) MT(MOD_LGUI, x)
 
-enum custom_keycodes { FAKE_MOD = FP_SAFE_RANGE, ZOOM_MOD, GAMING_TOGGLE, GAMING_CANARY, HOLD_MOUSE_LAYER, OSS_THUMB, OSS_SPACE, SELWORD, MOUSE_LAYER_EXIT, DRGSCRL };
+enum custom_keycodes { FAKE_MOD = FP_SAFE_RANGE, ZOOM_MOD, GAMING_TOGGLE, GAMING_CANARY, HOLD_MOUSE_LAYER, OSS_THUMB, OSS_SPACE, SELWORD, MOUSE_LAYER_EXIT, SDVX_TOGGLE, DRGSCRL };
 const uint16_t SELWD = SELWORD;
 
 bool fake_mod_active  = false;
@@ -67,162 +64,156 @@ bool dragscrolling    = false;
 
 uint16_t middle_click_scroll_buffer = 0;
 
+bool sdvx_encoders = false;
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-     [LAYER_BASE] = LAYOUT_ffkb(
-     // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
-          SYM_TAB,   KC_W,    KC_L,    KC_Y,    KC_P,    KC_B,      KC_Z,    KC_F,    KC_O,    KC_U, KC_QUOTE,  KC_MINUS,
-     // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-     C(KC_BSPC), HRC(KC_C), HRS(KC_R), HRA(KC_S), HRG(KC_T), KC_G,  KC_M,   HRG(KC_N), HRA(KC_E),  HRS(KC_I),     HRC(KC_A),  KC_BSPC,
-     // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-          SFT_ESC,   KC_Q,    KC_J,    KC_V,    KC_D,    KC_K,      KC_X,    KC_H,   KC_SLSH, KC_COMM,  KC_DOT, C(KC_BSPC),
-     // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-                     KC_MUTE,    OSS_THUMB,  NAV_SPC, OSSPC_BROWSE,      NAV_ENT,  SPC_NUM, C(KC_BSPC),   MEDIA
-     //                            ╰───────────────────────────╯ ╰──────────────────╯
-     ),
-
-     [LAYER_QWERTY] = LAYOUT_ffkb(
-     // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
-          _______,    KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,       KC_Y,    KC_U,    KC_I,    KC_O,    KC_P, _______,
-     // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-          _______, HRC(KC_A), HRS(KC_S), HRA(KC_D), HRG(KC_F),    KC_G,       KC_H,    HRG(KC_J),    HRA(KC_K),    HRS(KC_L), HRC(KC_SCLN), _______,
-     // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-          _______,    KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,       KC_N,    KC_M, KC_COMM,  KC_DOT, KC_SLSH, _______,
-     // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-                          _______,    _______,  _______,   KC_LALT,      _______,  _______, XXXXXXX, _______
-     //                            ╰───────────────────────────╯ ╰──────────────────╯
-     ),
-
-     [LAYER_GAMING] = LAYOUT_ffkb(
-          // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
-               ESC_SYM, KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,       KC_Y,    KC_U,    KC_I,    KC_O,    KC_P, KC_MINUS,
-          // ├───────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────┤
-               KC_LCTL, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,       KC_H,    KC_J,    KC_K,    KC_L, KC_SCLN, KC_BSPC,
-          // ├───────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────┤
-               KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,       KC_N,    KC_M, KC_COMM,  KC_DOT, KC_SLSH, DF(LAYER_GAMING_ESDF),
-        // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-                                   _______,    KC_LALT, KC_SPC, KC_TAB,        NAV_ENT, SPC_NUM, XXXXXXX, _______
-          //                            ╰───────────────────────────╯ ╰──────────────────╯
-          ),
-
-     [LAYER_GAMING_ESDF] = LAYOUT_ffkb(
-          // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
-               ESC_SYM, KC_T,    KC_Q,    KC_W,    KC_E,    KC_R,       KC_Y,    KC_U,    KC_I,    KC_O,    KC_P, KC_MINUS,
-          // ├───────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────┤
-               KC_G, KC_LSFT,    KC_A,    KC_S,    KC_D,    KC_F,       KC_H,    KC_J,    KC_K,    KC_L, KC_SCLN, KC_BSPC,
-          // ├───────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────┤
-               KC_B, KC_LCTL,    KC_Z,    KC_X,    KC_C,    KC_V,       KC_N,    KC_M, KC_COMM,  KC_DOT, KC_SLSH, DF(LAYER_GAMING),
-        // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-                                   _______,    KC_LALT, KC_SPC, KC_TAB,        NAV_ENT, SPC_NUM, XXXXXXX, _______
-          //                            ╰───────────────────────────╯ ╰──────────────────╯
-          ),
-     [LAYER_GAMING_CANARY] = LAYOUT_ffkb(
-     // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
-          SYM_TAB,   KC_W,    KC_L,    KC_Y,    KC_P,    KC_B,      KC_Z,    KC_F,    KC_O,    KC_U, KC_QUOTE,  KC_MINUS,
-     // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-     C(KC_BSPC), KC_C, KC_R, KC_S, KC_T, KC_G,      KC_M,    KC_N,    KC_E,    KC_I,     KC_A,  KC_BSPC,
-     // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-          SFT_ESC,   KC_Q,    KC_J,    KC_V,    KC_D,    KC_K,      KC_X,    KC_H,   KC_SLSH, KC_COMM,  KC_DOT, DF(LAYER_BASE),
-     // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-                   _______,    KC_LALT, KC_SPC, KC_TAB,        NAV_ENT, SPC_NUM, XXXXXXX, _______
-
-     //                            ╰───────────────────────────╯ ╰──────────────────╯
-     ),
-
-     [LAYER_NAV] = LAYOUT_ffkb(
-     // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
-          _______, _______, SELWD, KC_END,  _______, _______,    _______,  _______,  _______, _______, KC_PGUP, MO(LAYER_INTERNALS),
-     // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-          KC_LCTL, KC_HOME, C(KC_LEFT), KC_DEL, C(KC_RGHT),C(KC_HOME), KC_LEFT, KC_DOWN, KC_UP, KC_RGHT, KC_BSPC, _______,
-     // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-          KC_LSFT, _______, _______, _______,  EE_CLR, C(KC_LEFT), KC_PGDN,    _______,    _______,    _______, _______, _______,
-     // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-                               _______,    _______, KC_LSFT, _______,    _______, KC_LSFT, XXXXXXX, _______
-     //                            ╰───────────────────────────╯ ╰──────────────────╯
-     ),
-
-     [LAYER_NUMBER] = LAYOUT_ffkb(
-     // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
-          XXXXXXX, S(KC_1), S(KC_2), S(KC_3), S(KC_4), S(KC_5),      S(KC_6), S(KC_7),  S(KC_8), KC_MINUS, KC_F10, KC_F11,
-     // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-          XXXXXXX, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,         KC_6,     KC_7,    KC_8,    KC_9,    KC_0, _______,
-     // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-          XXXXXXX, KC_F1, KC_F2, KC_F3, KC_F4, KC_F5,                KC_F6, KC_F7, KC_F8, KC_F9, KC_DOT, KC_F12,
-     // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-                               _______,    XXXXXXX, KC_SPC, _______,    KC_RSFT, _______, XXXXXXX, _______
-     //                            ╰───────────────────────────╯ ╰──────────────────╯
-     ),
-
-
-     [LAYER_BROWSE] = LAYOUT_ffkb(
-     // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
- MO(LAYER_INTERNALS), C(S(KC_1)), C(KC_W), XXXXXXX, XXXXXXX, XXXXXXX,       KC_F14, KC_F15, KC_F17, KC_F18, KC_F19, KC_F20,
-     // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-          KC_LCTL, C(S(KC_2)), C(S(KC_3)), MEDIA, XXXXXXX, GAMING_TOGGLE, A(KC_LEFT), C(KC_TAB), C(S(KC_TAB)), A(KC_RGHT), XXXXXXX, XXXXXXX,
-     // ├──────────────────────────────────────────────────────┤ ├───   ───────────────────────────────────────────────────┤
-          FAKE_MOD, KC_LSFT, XXXXXXX, XXXXXXX, XXXXXXX, KC_MUTE,     KC_F13, KC_F21, XXXXXXX, XXXXXXX, KC_F22, KC_F16,
-     // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-                               _______,    XXXXXXX, XXXXXXX, _______,    XXXXXXX, _______, XXXXXXX, _______
-     //                            ╰───────────────────────────╯ ╰──────────────────╯
-     ),
-
-     [LAYER_MEDIA] = LAYOUT_ffkb(
-          // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
-               XXXXXXX, XXXXXXX, C(KC_MPRV), KC_VOLU, C(KC_MNXT), XXXXXXX,     XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
-          // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-               XXXXXXX, XXXXXXX, KC_MPRV, XXXXXXX, KC_MNXT, A(KC_MNXT),        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
-          // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-               XXXXXXX, XXXXXXX, XXXXXXX, KC_VOLD, C(KC_MUTE), KC_MUTE,        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
-        // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-                                  _______,    XXXXXXX, XXXXXXX, _______,    XXXXXXX, _______, XXXXXXX, _______
-          //                            ╰───────────────────────────╯ ╰──────────────────╯
-          ),
-
-     [LAYER_SYMBOL] = LAYOUT_ffkb(
-          // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
-               _______, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, GAMING_TOGGLE,  XXXXXXX, LSFT(KC_LBRC), KC_EQUAL, LSFT(KC_RBRC), KC_MINUS, KC_SCLN,
-          // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-               _______, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, GAMING_TOGGLE,  KC_LBRC, LSFT(KC_9), KC_BSLS, LSFT(KC_0), KC_RBRC, S(KC_SCLN),
-          // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-               _______, XXXXXXX, XXXXXXX, GAMING_CANARY, XXXXXXX, XXXXXXX,    XXXXXXX, XXXXXXX, XXXXXXX, KC_MINUS, S(KC_MINUS), KC_GRAVE,
-          // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-                           _______,    XXXXXXX, KC_LSFT, _______,    KC_LSFT, _______, _______,      _______
-          //                            ╰───────────────────────────╯ ╰──────────────────╯
-          ),
-
-     [LAYER_INTERNALS] = LAYOUT_ffkb(
-          // ╭──────────────────────────────────────────────────────╮  ╭──────────────────────────────────────────────────────╮
-               XXXXXXX,  XXXXXXX, XXXXXXX, XXXXXXX, FP_POINT_DPI_RESET, FP_POINT_DPI_UP,      XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
-          // ├──────────────────────────────────────────────────────┤  ├──────────────────────────────────────────────────────┤
-               XXXXXXX, FP_ACCEL_TOG, XXXXXXX, XXXXXXX, XXXXXXX, FP_POINT_DPI_DN, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
-          // ├──────────────────────────────────────────────────────┤  ├──────────────────────────────────────────────────────┤
-               XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, EE_CLR, QK_BOOT,        QK_BOOT, EE_CLR, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
-          // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-                                    _______,    XXXXXXX, XXXXXXX, _______,    XXXXXXX, _______, _______, _______
-          //                            ╰───────────────────────────╯ ╰──────────────────╯
-          ),
-
-
-        [LAYER_POINTER] = LAYOUT_ffkb(
+    [LAYER_BASE] = LAYOUT_ffkb(
         // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
-            _______,  _______, _______, _______, _______, _______,   KC_BTN1, DRGSCRL, KC_BTN2, _______,  _______, QK_BOOT,
+        SYM_TAB, KC_W, KC_L, KC_Y, KC_P, KC_B, KC_Z, KC_F, KC_O, KC_U, KC_QUOTE, KC_MINUS,
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-            _______,  _______, _______, _______, _______, _______,    _______, _______, _______, _______, _______, _______,
-            // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-            _______,  MOUSE_LAYER_EXIT, KC_BTN2, DRGSCRL, KC_BTN1, _______,    _______, _______, _______, _______, _______, _______,
-            // _______,  _______, _______, _______, _______, _______,    _______, KC_BTN1, DRGSCRL, KC_BTN2, SNIPING, HOLD_MOUSE_LAYER,
+        C(KC_BSPC), HRC(KC_C), HRS(KC_R), HRA(KC_S), HRG(KC_T), KC_G, KC_M, HRG(KC_N), HRA(KC_E), HRS(KC_I), HRC(KC_A), KC_BSPC,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        SFT_ESC, KC_Q, KC_J, KC_V, KC_D, KC_K, KC_X, KC_H, KC_SLSH, KC_COMM, KC_DOT, C(KC_BSPC),
         // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-                                 _______,    _______, _______, _______,    _______, _______, _______,     _______
+        KC_MUTE, OSS_THUMB, NAV_SPC, OSSPC_BROWSE, NAV_ENT, SPC_NUM, C(KC_BSPC), MEDIA
+        //                            ╰───────────────────────────╯ ╰──────────────────╯
+        ),
+
+    [LAYER_QWERTY] = LAYOUT_ffkb(
+        // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
+        _______, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, _______,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        _______, HRC(KC_A), HRS(KC_S), HRA(KC_D), HRG(KC_F), KC_G, KC_H, HRG(KC_J), HRA(KC_K), HRS(KC_L), HRC(KC_SCLN), _______,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        _______, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, _______,
+        // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
+        _______, _______, _______, KC_LALT, _______, _______, XXXXXXX, _______
+        //                            ╰───────────────────────────╯ ╰──────────────────╯
+        ),
+
+    [LAYER_GAMING] = LAYOUT_ffkb(
+        // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
+        ESC_SYM, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_MINUS,
+        // ├───────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────┤
+        KC_LCTL, KC_A, KC_S, KC_D, KC_F, KC_G, KC_H, KC_J, KC_K, KC_L, KC_SCLN, KC_BSPC,
+        // ├───────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────┤
+        KC_LSFT, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, DF(LAYER_GAMING_ESDF),
+        // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
+        _______, KC_LALT, KC_SPC, KC_TAB, NAV_ENT, SPC_NUM, KC_BSLS, _______
+        //                            ╰───────────────────────────╯ ╰──────────────────╯
+        ),
+
+    [LAYER_GAMING_ESDF] = LAYOUT_ffkb(
+        // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
+        ESC_SYM, KC_T, KC_Q, KC_W, KC_E, KC_R, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_MINUS,
+        // ├───────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────┤
+        KC_G, KC_LSFT, KC_A, KC_S, KC_D, KC_F, KC_H, KC_J, KC_K, KC_L, KC_SCLN, KC_BSPC,
+        // ├───────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────┤
+        KC_B, KC_LCTL, KC_Z, KC_X, KC_C, KC_V, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, DF(LAYER_GAMING),
+        // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
+        _______, KC_LALT, KC_SPC, KC_TAB, NAV_ENT, SPC_NUM, XXXXXXX, _______
+        //                            ╰───────────────────────────╯ ╰──────────────────╯
+        ),
+    [LAYER_GAMING_CANARY] = LAYOUT_ffkb(
+        // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
+        SYM_TAB, KC_W, KC_L, KC_Y, KC_P, KC_B, KC_Z, KC_F, KC_O, KC_U, KC_QUOTE, KC_MINUS,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        C(KC_BSPC), KC_C, KC_R, KC_S, KC_T, KC_G, KC_M, KC_N, KC_E, KC_I, KC_A, KC_BSPC,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        SFT_ESC, KC_Q, KC_J, KC_V, KC_D, KC_K, KC_X, KC_H, KC_SLSH, KC_COMM, KC_DOT, C(KC_BSPC),
+        // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
+        _______, KC_LALT, KC_SPC, KC_TAB, NAV_ENT, SPC_NUM, XXXXXXX, _______
+
+        //                            ╰───────────────────────────╯ ╰──────────────────╯
+        ),
+
+    [LAYER_NAV] = LAYOUT_ffkb(
+        // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
+        _______, _______, SELWD, KC_END, _______, _______, _______, _______, _______, _______, KC_PGUP, MO(LAYER_INTERNALS),
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        KC_LCTL, KC_HOME, C(KC_LEFT), KC_DEL, C(KC_RGHT), C(KC_HOME), KC_LEFT, KC_DOWN, KC_UP, KC_RGHT, KC_BSPC, _______,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        KC_LSFT, _______, _______, _______, EE_CLR, C(KC_LEFT), KC_PGDN, _______, _______, _______, _______, _______,
+        // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
+        _______, _______, KC_LSFT, _______, _______, KC_LSFT, XXXXXXX, _______
+        //                            ╰───────────────────────────╯ ╰──────────────────╯
+        ),
+
+    [LAYER_NUMBER] = LAYOUT_ffkb(
+        // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
+        XXXXXXX, S(KC_1), S(KC_2), S(KC_3), S(KC_4), S(KC_5), S(KC_6), S(KC_7), S(KC_8), KC_MINUS, KC_F10, KC_F11,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        XXXXXXX, KC_1, KC_2, KC_3, KC_4, KC_5, KC_6, KC_7, KC_8, KC_9, KC_0, _______,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        XXXXXXX, KC_F1, KC_F2, KC_F3, KC_F4, KC_F5, KC_F6, KC_F7, KC_F8, KC_F9, KC_DOT, KC_F12,
+        // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
+        _______, XXXXXXX, KC_SPC, _______, KC_RSFT, _______, XXXXXXX, _______
+        //                            ╰───────────────────────────╯ ╰──────────────────╯
+        ),
+
+    [LAYER_BROWSE] = LAYOUT_ffkb(
+        // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
+        MO(LAYER_INTERNALS), C(S(KC_1)), C(KC_W), XXXXXXX, XXXXXXX, XXXXXXX, KC_F14, KC_F15, KC_F17, KC_F18, KC_F19, KC_F20,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        KC_LCTL, C(S(KC_2)), C(S(KC_3)), MEDIA, XXXXXXX, GAMING_TOGGLE, A(KC_LEFT), C(KC_TAB), C(S(KC_TAB)), A(KC_RGHT), XXXXXXX, XXXXXXX,
+        // ├──────────────────────────────────────────────────────┤ ├───   ───────────────────────────────────────────────────┤
+        FAKE_MOD, KC_LSFT, XXXXXXX, XXXXXXX, XXXXXXX, KC_MUTE, KC_F13, KC_F21, XXXXXXX, XXXXXXX, KC_F22, KC_F16,
+        // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
+        _______, XXXXXXX, XXXXXXX, _______, XXXXXXX, _______, XXXXXXX, _______
+        //                            ╰───────────────────────────╯ ╰──────────────────╯
+        ),
+
+    [LAYER_MEDIA] = LAYOUT_ffkb(
+        // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
+        XXXXXXX, XXXXXXX, C(KC_MPRV), KC_VOLU, C(KC_MNXT), XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        XXXXXXX, XXXXXXX, KC_MPRV, XXXXXXX, KC_MNXT, A(KC_MNXT), XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        XXXXXXX, XXXXXXX, XXXXXXX, KC_VOLD, C(KC_MUTE), KC_MUTE, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
+        _______, XXXXXXX, XXXXXXX, _______, XXXXXXX, _______, XXXXXXX, _______
+        //                            ╰───────────────────────────╯ ╰──────────────────╯
+        ),
+
+    [LAYER_SYMBOL] = LAYOUT_ffkb(
+        // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
+        _______, KC_LSFT, XXXXXXX, XXXXXXX, XXXXXXX, GAMING_TOGGLE, XXXXXXX, LSFT(KC_LBRC), KC_EQUAL, LSFT(KC_RBRC), KC_MINUS, KC_SCLN,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        _______, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, GAMING_TOGGLE, KC_LBRC, LSFT(KC_9), KC_BSLS, LSFT(KC_0), KC_RBRC, S(KC_SCLN),
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        _______, XXXXXXX, XXXXXXX, GAMING_CANARY, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_MINUS, S(KC_MINUS), KC_GRAVE,
+        // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
+        _______, XXXXXXX, KC_LSFT, _______, KC_LSFT, _______, _______, _______
+        //                            ╰───────────────────────────╯ ╰──────────────────╯
+        ),
+
+    [LAYER_INTERNALS] = LAYOUT_ffkb(
+        // ╭──────────────────────────────────────────────────────╮  ╭──────────────────────────────────────────────────────╮
+        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, FP_POINT_DPI_RESET, FP_POINT_DPI_UP, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        // ├──────────────────────────────────────────────────────┤  ├──────────────────────────────────────────────────────┤
+        XXXXXXX, FP_ACCEL_TOG, SDVX_TOGGLE, XXXXXXX, XXXXXXX, FP_POINT_DPI_DN, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        // ├──────────────────────────────────────────────────────┤  ├──────────────────────────────────────────────────────┤
+        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, EE_CLR, QK_BOOT, QK_BOOT, EE_CLR, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
+        _______, XXXXXXX, XXXXXXX, _______, XXXXXXX, _______, _______, _______
+        //                            ╰───────────────────────────╯ ╰──────────────────╯
+        ),
+
+    [LAYER_POINTER] = LAYOUT_ffkb(
+        // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
+        _______, _______, _______, _______, _______, _______, KC_BTN1, DRGSCRL, KC_BTN2, _______, _______, _______,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        _______, MOUSE_LAYER_EXIT, KC_BTN2, DRGSCRL, KC_BTN1, _______, _______, _______, _______, _______, _______, _______,
+        // _______,  _______, _______, _______, _______, _______,    _______, KC_BTN1, DRGSCRL, KC_BTN2, SNIPING, HOLD_MOUSE_LAYER,
+        // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
+        _______, _______, _______, _______, _______, _______, _______, _______
         //                            ╰───────────────────────────╯ ╰──────────────────╯
         ),
 };
 
-#
-const char chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS] PROGMEM = LAYOUT_ffkb(
-    'L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R',
-    'L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R',
-    'L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R',
-            'L',   'L', 'L', 'L', 'R', 'R', 'R',   'R');
-
+const char chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS] PROGMEM = LAYOUT_ffkb('L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R');
 
 // layer_state_t layer_state_set_user(layer_state_t state) {
 //   return update_tri_layer_state(state, _LOWER, _RAISE, _ADJUST);
@@ -240,7 +231,7 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
         }
     } else if (layer_state_is(LAYER_NAV)) {
         if (index == ENC_RIGHT) {
-            tap_code16(clockwise ? C(KC_RIGHT): C(KC_LEFT));
+            tap_code16(clockwise ? C(KC_RIGHT) : C(KC_LEFT));
         }
     } else if (layer_state_is(LAYER_MEDIA)) {
         if (index == ENC_RIGHT) {
@@ -248,10 +239,21 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
         } else {
             tap_code16(clockwise ? KC_BRIU : KC_BRID);
         }
-    } else /* Any other layer */ {
+    } else if (layer_state_is(LAYER_SYMBOL)) {
+        if (index == ENC_LEFT) {
+            tap_code16(clockwise ? G(KC_L) : G(KC_H));
+        } else {
+            tap_code16(clockwise ? G(KC_K) : G(KC_J));
+        }
+    } else if (sdvx_encoders == true) {
         if (index == ENC_LEFT)
-            tap_code(clockwise ? KC_VOLU : KC_VOLD);
-            // tap_code(clockwise ? KC_MS_WH_DOWN : KC_MS_WH_UP);
+            tap_code(clockwise ? KC_2 : KC_1);
+        else if (index == ENC_RIGHT)
+            tap_code(clockwise ? KC_4 : KC_3);
+
+    } else /* Any other layer */ {
+        if (index == ENC_LEFT) tap_code(clockwise ? KC_VOLU : KC_VOLD);
+        // tap_code(clockwise ? KC_MS_WH_DOWN : KC_MS_WH_UP);
         else if (index == ENC_RIGHT)
             tap_code(clockwise ? KC_VOLU : KC_VOLD);
     }
@@ -318,7 +320,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         return false;
     }
 
-
     if (keycode == LT(LAYER_BROWSE, KC_NO)) {
         if (record->tap.count && record->event.pressed) {
             tap_code16(KC_SPC);
@@ -335,6 +336,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         }
     }
 
+    if (keycode == SDVX_TOGGLE && record->event.pressed) {
+        sdvx_encoders = !sdvx_encoders;
+        uprintf("sdvx encoders toggled\n");
+        return false;
+    }
+
     if (keycode == GAMING_TOGGLE || keycode == GAMING_CANARY) {
         if (record->event.pressed) {
             layer_off(LAYER_NAV);
@@ -345,7 +352,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 set_single_default_layer(LAYER_BASE);
             } else {
                 // uprintf("process_record_user: activating layer LAYER_GAMING\n");
-                if(keycode == GAMING_CANARY)
+                if (keycode == GAMING_CANARY)
                     set_single_default_layer(LAYER_GAMING_CANARY);
                 else
                     set_single_default_layer(LAYER_GAMING);
@@ -392,14 +399,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (record->event.pressed) {
         // uprintf("process_record_user: keycode %04X pressed, mods: %04X\n", keycode, get_mods());
         if ((get_mods() != 0) && (!(get_mods() & MOD_MASK_SHIFT))) {
-            //uprintf("process_record_user: activating layer LAYER_QWERTY\n");
+            // uprintf("process_record_user: activating layer LAYER_QWERTY\n");
             layer_on(LAYER_QWERTY);
         } else { // regular other key
             if (layer_state_is(LAYER_QWERTY) && (get_mods() == 0 || get_mods() == MOD_MASK_SHIFT)) {
-                //uprintf("process_record_user: deactivating layer LAYER_QWERTY\n");
+                // uprintf("process_record_user: deactivating layer LAYER_QWERTY\n");
                 layer_off(LAYER_QWERTY);
             } else if (get_mods() != 0 && get_mods() != 2) {
-                //uprintf("process_record_user: [2] activating layer LAYER_QWERTY\n");
+                // uprintf("process_record_user: [2] activating layer LAYER_QWERTY\n");
                 layer_on(LAYER_QWERTY);
             }
         }
@@ -445,8 +452,6 @@ uint16_t get_quick_tap_term(uint16_t keycode, keyrecord_t *record) {
     }
 }
 
-
-
 bool get_chordal_hold(uint16_t tap_hold_keycode, keyrecord_t *tap_hold_record, uint16_t other_keycode, keyrecord_t *other_record) {
     // Exceptionally allow some one-handed chords for hotkeys.
     switch (tap_hold_keycode) {
@@ -463,7 +468,7 @@ bool get_chordal_hold(uint16_t tap_hold_keycode, keyrecord_t *tap_hold_record, u
     return get_chordal_hold_default(tap_hold_record, other_record);
 }
 
-bool get_speculative_hold(uint16_t keycode, keyrecord_t* record) {
+bool get_speculative_hold(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) { // These keys may be speculatively held.
         case LCTL_T(KC_ESC):
         case LSFT_T(KC_Z):
@@ -509,11 +514,6 @@ combo_t                key_combos[]          = {
     // COMBO(c_backspace_combo, C(KC_BSPC)),
     // COMBO(test_combo2, LCTL(KC_Z)), // keycodes with modifiers are possible too!
 };
-
-
-
-
-
 
 static int16_t custom_trackball_counter = 0;
 #define CUSTOM_TRACKBALL_TRIGGER_DELTA 40

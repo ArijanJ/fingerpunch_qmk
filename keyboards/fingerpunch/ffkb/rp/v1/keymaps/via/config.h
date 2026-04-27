@@ -25,6 +25,8 @@
 
 #define DYNAMIC_KEYMAP_LAYER_COUNT 16
 
+#define ENCODER_DEFAULT_POS 0x3
+
 #ifndef __arm__
 /* Disable unused features. */
 #    define NO_ACTION_ONESHOT

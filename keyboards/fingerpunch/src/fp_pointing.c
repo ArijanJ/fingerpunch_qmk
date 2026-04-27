@@ -508,7 +508,9 @@ bool fp_process_record_pointing(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case FP_ACCEL_TOG:
 #       ifdef FP_POINTING_ACCELERATION_ENABLE
-            acceleration_enabled = !acceleration_enabled;
+            if (record->event.pressed) {
+                acceleration_enabled = !acceleration_enabled;
+            }
 #       endif
             break;
         case FP_SCROLL_MOMENT:
