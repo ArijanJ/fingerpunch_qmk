@@ -463,6 +463,9 @@ bool get_chordal_hold(uint16_t tap_hold_keycode, keyrecord_t *tap_hold_record, u
         case SPC_NUM:
             return true;
             break;
+        case HRA(KC_S):
+            if (other_keycode == SYM_TAB)
+                return true;
     }
     // Otherwise defer to the opposite hands rule.
     return get_chordal_hold_default(tap_hold_record, other_record);
@@ -491,6 +494,7 @@ bool is_flow_tap_key(uint16_t keycode) {
     switch (keycode) {
         case NAV_SPC:
         case SPC_NUM:
+        case SYM_TAB: // For alt-tabbing
             return false;
     }
     switch (get_tap_keycode(keycode)) {
