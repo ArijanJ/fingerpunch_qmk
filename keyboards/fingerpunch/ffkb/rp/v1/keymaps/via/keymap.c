@@ -333,9 +333,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         set_oneshot_mods(MOD_BIT(KC_LSFT));
         return false;
     }
-    if (keycode == DELWORDBACK && record->event.pressed) {
-        clear_oneshot_mods();
-        tap_code16(C(KC_BSPC));
+    if (keycode == DELWORDBACK) {
+        if (record->event.pressed) {
+            clear_oneshot_mods();
+            register_code16(C(KC_BSPC));
+        } else {
+            unregister_code16(C(KC_BSPC));
+        }
+        return false;
     }
 
     if (keycode == NAV_ENT) {
