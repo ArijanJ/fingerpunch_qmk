@@ -53,7 +53,7 @@ enum keymap_layers {
 #define HRA(x) MT(MOD_LALT, x)
 #define HRG(x) MT(MOD_LGUI, x)
 
-enum custom_keycodes { FAKE_MOD = FP_SAFE_RANGE, ZOOM_MOD, GAMING_TOGGLE, GAMING_CANARY, HOLD_MOUSE_LAYER, OSS_THUMB, OSS_SPACE, SELWORD, MOUSE_LAYER_EXIT, SDVX_TOGGLE, DRGSCRL };
+enum custom_keycodes { FAKE_MOD = FP_SAFE_RANGE, ZOOM_MOD, GAMING_TOGGLE, GAMING_CANARY, HOLD_MOUSE_LAYER, OSS_THUMB, OSS_SPACE, SELWORD, MOUSE_LAYER_EXIT, SDVX_TOGGLE, DRGSCRL, SPACESHIFT };
 const uint16_t SELWD = SELWORD;
 
 bool fake_mod_active  = false;
@@ -122,7 +122,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
         SFT_ESC, KC_Q, KC_J, KC_V, KC_D, KC_K, KC_X, KC_H, KC_SLSH, KC_COMM, KC_DOT, C(KC_BSPC),
         // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-        _______, KC_LALT, KC_SPC, KC_TAB, NAV_ENT, SPC_NUM, XXXXXXX, _______
+        _______, OSS_THUMB, KC_SPC, SPACESHIFT, NAV_ENT, SPC_NUM, XXXXXXX, _______
 
         //                            ╰───────────────────────────╯ ╰──────────────────╯
         ),
@@ -328,6 +328,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         }
         return true;
     }
+    if (keycode == SPACESHIFT && record->event.pressed) {
+        tap_code16(KC_SPC);
+        set_oneshot_mods(MOD_BIT(KC_LSFT));
+        return false;
+    }
 
     if (keycode == NAV_ENT) {
         if (is_gaming && record->tap.count && record->event.pressed) {
@@ -464,8 +469,7 @@ bool get_chordal_hold(uint16_t tap_hold_keycode, keyrecord_t *tap_hold_record, u
             return true;
             break;
         case HRA(KC_S):
-            if (other_keycode == SYM_TAB)
-                return true;
+            if (other_keycode == SYM_TAB) return true;
     }
     // Otherwise defer to the opposite hands rule.
     return get_chordal_hold_default(tap_hold_record, other_record);
