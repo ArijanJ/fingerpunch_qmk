@@ -53,7 +53,7 @@ enum keymap_layers {
 #define HRA(x) MT(MOD_LALT, x)
 #define HRG(x) MT(MOD_LGUI, x)
 
-enum custom_keycodes { FAKE_MOD = FP_SAFE_RANGE, ZOOM_MOD, GAMING_TOGGLE, GAMING_CANARY, HOLD_MOUSE_LAYER, OSS_THUMB, OSS_SPACE, SELWORD, MOUSE_LAYER_EXIT, SDVX_TOGGLE, DRGSCRL, SPACESHIFT };
+enum custom_keycodes { FAKE_MOD = FP_SAFE_RANGE, ZOOM_MOD, GAMING_TOGGLE, GAMING_CANARY, HOLD_MOUSE_LAYER, OSS_THUMB, OSS_SPACE, SELWORD, MOUSE_LAYER_EXIT, SDVX_TOGGLE, DRGSCRL, SPACESHIFT, DELWORDBACK };
 const uint16_t SELWD = SELWORD;
 
 bool fake_mod_active  = false;
@@ -73,7 +73,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
         C(KC_BSPC), HRC(KC_C), HRS(KC_R), HRA(KC_S), HRG(KC_T), KC_G, KC_M, HRG(KC_N), HRA(KC_E), HRS(KC_I), HRC(KC_A), KC_BSPC,
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-        SFT_ESC, KC_Q, KC_J, KC_V, KC_D, KC_K, KC_X, KC_H, KC_SLSH, KC_COMM, KC_DOT, C(KC_BSPC),
+        SFT_ESC, KC_Q, KC_J, KC_V, KC_D, KC_K, KC_X, KC_H, KC_SLSH, KC_COMM, KC_DOT, DELWORDBACK,
         // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
         KC_MUTE, OSS_THUMB, NAV_SPC, OSSPC_BROWSE, NAV_ENT, SPC_NUM, C(KC_BSPC), MEDIA
         //                            ╰───────────────────────────╯ ╰──────────────────╯
@@ -120,7 +120,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
         C(KC_BSPC), KC_C, KC_R, KC_S, KC_T, KC_G, KC_M, KC_N, KC_E, KC_I, KC_A, KC_BSPC,
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-        SFT_ESC, KC_Q, KC_J, KC_V, KC_D, KC_K, KC_X, KC_H, KC_SLSH, KC_COMM, KC_DOT, C(KC_BSPC),
+        SFT_ESC, KC_Q, KC_J, KC_V, KC_D, KC_K, KC_X, KC_H, KC_SLSH, KC_COMM, KC_DOT, DELWORDBACK,
         // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
         _______, OSS_THUMB, KC_SPC, SPACESHIFT, NAV_ENT, SPC_NUM, XXXXXXX, _______
 
@@ -333,6 +333,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         set_oneshot_mods(MOD_BIT(KC_LSFT));
         return false;
     }
+    if (keycode == DELWORDBACK && record->event.pressed) {
+        clear_oneshot_mods();
+        tap_code16(C(KC_BSPC));
+    }
 
     if (keycode == NAV_ENT) {
         if (is_gaming && record->tap.count && record->event.pressed) {
@@ -352,15 +356,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             layer_off(LAYER_NAV);
             layer_off(LAYER_INTERNALS);
             layer_off(LAYER_SYMBOL);
+
+            if (keycode == GAMING_CANARY) {
+                set_single_default_layer(LAYER_GAMING_CANARY);
+                combo_disable();
+                is_gaming = true;
+                return false;
+            }
+
             if (is_gaming) {
                 // uprintf("process_record_user: deactivating layer LAYER_GAMING\n");
                 set_single_default_layer(LAYER_BASE);
             } else {
                 // uprintf("process_record_user: activating layer LAYER_GAMING\n");
-                if (keycode == GAMING_CANARY)
-                    set_single_default_layer(LAYER_GAMING_CANARY);
-                else
-                    set_single_default_layer(LAYER_GAMING);
+                set_single_default_layer(LAYER_GAMING);
             }
             is_gaming = !is_gaming;
             combo_toggle();
