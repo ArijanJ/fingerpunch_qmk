@@ -233,7 +233,7 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
 #        define SHARED_REPORT_STARTED
 #    endif
     HID_RI_USAGE_PAGE(8, 0x01),     // Generic Desktop
-    HID_RI_USAGE(8, 0x04),          // Joystick
+    HID_RI_USAGE(8, 0x05),          // Gamepad
     HID_RI_COLLECTION(8, 0x01),     // Application
 #    ifdef JOYSTICK_SHARED_EP
         HID_RI_REPORT_ID(8, REPORT_ID_JOYSTICK),

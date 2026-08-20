@@ -9,7 +9,7 @@
 #define PWM33XX_LIFTOFF_DISTANCE 4
 
 #define POINTING_DEVICE_AUTO_MOUSE_ENABLE
-#define AUTO_MOUSE_DEFAULT_LAYER 11
+#define AUTO_MOUSE_DEFAULT_LAYER 12
 
 #define FP_POINTING_ACCELERATION_ENABLE
 #define AUTO_MOUSE_TIME 500
@@ -52,6 +52,15 @@
 
 #define USB_POLLING_INTERVAL_MS 1
 #define QMK_KEYS_PER_SCAN 12
+
+// Joystick Button Count
+#define JOYSTICK_BUTTON_COUNT 32
+
+// Joystick Axes Count
+#define JOYSTICK_AXIS_COUNT 6
+
+// Joystick Axes Resolution
+#define JOYSTICK_AXIS_RESOLUTION 8
 
 /* Charybdis-specific features. */
 

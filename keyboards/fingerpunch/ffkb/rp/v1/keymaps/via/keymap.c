@@ -1,5 +1,15 @@
 #include QMK_KEYBOARD_H
 
+#include "custom_keycodes.h"
+
+#ifdef AUDIO_ENABLE
+#include "audio.h"
+#define JS_ON_SOUND EIGHTH_NOTE(_E5), EIGHTH_NOTE(_G5), EIGHTH_NOTE(_B5),
+#define JS_OFF_SOUND EIGHTH_NOTE(_B5), EIGHTH_NOTE(_G5), EIGHTH_NOTE(_E5),
+float fp_js_on_sound[][2] = SONG(JS_ON_SOUND);
+float fp_js_off_sound[][2] = SONG(JS_OFF_SOUND);
+#endif
+
 // Defines names for use in layer keycodes and the keymap
 // enum layer_names {
 //     _QWERTY,
@@ -17,6 +27,7 @@ enum keymap_layers {
     LAYER_GAMING,
     LAYER_GAMING_ESDF,
     LAYER_GAMING_CANARY,
+    LAYER_JOYSTICK,
     LAYER_NAV,
     LAYER_NUMBER,
     LAYER_BROWSE,
@@ -53,7 +64,6 @@ enum keymap_layers {
 #define HRA(x) MT(MOD_LALT, x)
 #define HRG(x) MT(MOD_LGUI, x)
 
-enum custom_keycodes { FAKE_MOD = FP_SAFE_RANGE, ZOOM_MOD, GAMING_TOGGLE, GAMING_CANARY, HOLD_MOUSE_LAYER, OSS_THUMB, OSS_SPACE, SELWORD, MOUSE_LAYER_EXIT, SDVX_TOGGLE, DRGSCRL, SPACESHIFT, DELWORDBACK };
 const uint16_t SELWD = SELWORD;
 
 bool fake_mod_active  = false;
@@ -61,6 +71,7 @@ bool zoom_mod_active  = false;
 bool is_gaming        = false;
 bool hold_mouse_layer = false;
 bool dragscrolling    = false;
+bool is_joystick_mode = false;
 
 uint16_t middle_click_scroll_buffer = 0;
 
@@ -127,6 +138,18 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         //                            ╰───────────────────────────╯ ╰──────────────────╯
         ),
 
+    [LAYER_JOYSTICK] = LAYOUT_ffkb(
+        // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
+        MO(LAYER_SYMBOL), XXXXXXX, XXXXXXX, GC_LSU, XXXXXXX, XXXXXXX, XXXXXXX, GC_SQU, GC_TRI, GC_L1, XXXXXXX, XXXXXXX,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        XXXXXXX, XXXXXXX, GC_LSL, GC_LSD, GC_LSR, XXXXXXX,     GC_L3, GC_CRO, GC_CIR, GC_R1, GC_R3, XXXXXXX,
+        // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
+        GC_SEL, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
+                                _______, XXXXXXX, GC_LSU, XXXXXXX,    GC_STA, XXXXXXX, XXXXXXX, _______
+        //                            ╰───────────────────────────╯ ╰──────────────────╯
+        ),
+
     [LAYER_NAV] = LAYOUT_ffkb(
         // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
         _______, _______, SELWD, KC_END, _______, _______, _______, _______, _______, _______, KC_PGUP, MO(LAYER_INTERNALS),
@@ -181,7 +204,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
         _______, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, GAMING_TOGGLE, KC_LBRC, LSFT(KC_9), KC_BSLS, LSFT(KC_0), KC_RBRC, S(KC_SCLN),
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-        _______, XXXXXXX, XXXXXXX, GAMING_CANARY, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_MINUS, S(KC_MINUS), KC_GRAVE,
+        _______, XXXXXXX, XXXXXXX, GAMING_CANARY, XXXXXXX, JS_TOGGLE, XXXXXXX, XXXXXXX, XXXXXXX, KC_MINUS, S(KC_MINUS), KC_GRAVE,
         // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
         _______, XXXXXXX, KC_LSFT, _______, KC_LSFT, _______, _______, _______
         //                            ╰───────────────────────────╯ ╰──────────────────╯
@@ -193,7 +216,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // ├──────────────────────────────────────────────────────┤  ├──────────────────────────────────────────────────────┤
         XXXXXXX, FP_ACCEL_TOG, SDVX_TOGGLE, XXXXXXX, XXXXXXX, FP_POINT_DPI_DN, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
         // ├──────────────────────────────────────────────────────┤  ├──────────────────────────────────────────────────────┤
-        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, EE_CLR, QK_BOOT, QK_BOOT, EE_CLR, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, EE_CLR, QK_BOOT, XXXXXXX, EE_CLR, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
         // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
         _______, XXXXXXX, XXXXXXX, _______, XXXXXXX, _______, _______, _______
         //                            ╰───────────────────────────╯ ╰──────────────────╯
@@ -211,6 +234,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______, _______, _______, _______, _______, _______, _______, _______
         //                            ╰───────────────────────────╯ ╰──────────────────╯
         ),
+
 };
 
 const char chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS] PROGMEM = LAYOUT_ffkb('L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R');
@@ -261,7 +285,15 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
     return false;
 }
 
+// -------------------
+bool process_fightstick_keycode(uint16_t keycode, keyrecord_t *record);
+// -------------------
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (keycode >= GC_LSU)
+        if (!process_fightstick_keycode(keycode, record))
+            return false;
+
     // if (!process_sentence_case(keycode, record)) { return false; }
     // if (!process_select_word(keycode, record)) { return false; }
 
@@ -378,6 +410,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             is_gaming = !is_gaming;
             combo_toggle();
+        }
+        return false;
+    }
+
+    if (keycode == JS_TOGGLE) {
+        if (record->event.pressed) {
+            layer_invert(LAYER_JOYSTICK);
+            is_joystick_mode = !is_joystick_mode;
+            set_auto_mouse_enable(!is_joystick_mode);
+            #ifdef AUDIO_ENABLE
+            if (is_joystick_mode) {
+                PLAY_SONG(fp_js_on_sound);
+            } else {
+                PLAY_SONG(fp_js_off_sound);
+            }
+            #endif
         }
         return false;
     }
@@ -553,7 +601,65 @@ report_mouse_t    scroll_state_buffer = {};
 int16_t horizontal_buffer = 0;
 int16_t vertical_buffer   = 0;
 
+static int16_t trackball_stick_x = 0;
+static int16_t trackball_stick_y = 0;
+static uint16_t trackball_idle_x = 0;
+static uint16_t trackball_idle_y = 0;
+#define TRACKBALL_STICK_SENSITIVITY 2
+#define TRACKBALL_STICK_DECAY 1
+#define TRACKBALL_STICK_IDLE_THRESHOLD 50
+
 report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
+    if (is_joystick_mode) {
+        trackball_stick_x += mouse_report.x * TRACKBALL_STICK_SENSITIVITY;
+        trackball_stick_y += mouse_report.y * TRACKBALL_STICK_SENSITIVITY;
+
+        if (mouse_report.x == 0) {
+            trackball_idle_x++;
+            if (trackball_idle_x > TRACKBALL_STICK_IDLE_THRESHOLD) {
+                if (trackball_stick_x > 0) {
+                    if (trackball_stick_x < TRACKBALL_STICK_DECAY) trackball_stick_x = 0;
+                    else trackball_stick_x -= TRACKBALL_STICK_DECAY;
+                } else if (trackball_stick_x < 0) {
+                    if (trackball_stick_x > -TRACKBALL_STICK_DECAY) trackball_stick_x = 0;
+                    else trackball_stick_x += TRACKBALL_STICK_DECAY;
+                }
+            }
+        } else {
+            trackball_idle_x = 0;
+        }
+
+        if (mouse_report.y == 0) {
+            trackball_idle_y++;
+            if (trackball_idle_y > TRACKBALL_STICK_IDLE_THRESHOLD) {
+                if (trackball_stick_y > 0) {
+                    if (trackball_stick_y < TRACKBALL_STICK_DECAY) trackball_stick_y = 0;
+                    else trackball_stick_y -= TRACKBALL_STICK_DECAY;
+                } else if (trackball_stick_y < 0) {
+                    if (trackball_stick_y > -TRACKBALL_STICK_DECAY) trackball_stick_y = 0;
+                    else trackball_stick_y += TRACKBALL_STICK_DECAY;
+                }
+            }
+        } else {
+            trackball_idle_y = 0;
+        }
+
+        if (trackball_stick_x > 127) trackball_stick_x = 127;
+        else if (trackball_stick_x < -127) trackball_stick_x = -127;
+
+        if (trackball_stick_y > 127) trackball_stick_y = 127;
+        else if (trackball_stick_y < -127) trackball_stick_y = -127;
+
+        joystick_set_axis(3, trackball_stick_x);
+        joystick_set_axis(4, trackball_stick_y);
+
+        mouse_report.x = 0;
+        mouse_report.y = 0;
+        mouse_report.h = 0;
+        mouse_report.v = 0;
+        return mouse_report;
+    }
+
     // Lower sensitivity while scrolling, I guess - doesn't work, reports are often 1 or -1
     // if (dragscrolling) {
     //     mouse_report.x /= 2;
