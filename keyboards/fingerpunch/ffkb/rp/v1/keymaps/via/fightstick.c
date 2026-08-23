@@ -60,32 +60,40 @@ bool process_fightstick_keycode(uint16_t keycode, keyrecord_t *record) {
 				}
 			}
 			return false;
-		case GC_LSL:
-			if (record->event.pressed) {
-				LSL_STATE = true;
-				joystick_set_axis(0, -127);
+	case GC_LSL:
+		if (record->event.pressed) {
+			LSL_STATE = true;
+			if (LSR_STATE) {
+				joystick_set_axis(0, 0);
 			} else {
-				LSL_STATE = false;
-				if (LSR_STATE) {
-					joystick_set_axis(0, 127);
-				} else {
-					joystick_set_axis(0, 0);
-				}
+				joystick_set_axis(0, -127);
 			}
-			return false;
-		case GC_LSR:
-			if (record->event.pressed) {
-				LSR_STATE = true;
+		} else {
+			LSL_STATE = false;
+			if (LSR_STATE) {
 				joystick_set_axis(0, 127);
 			} else {
-				LSR_STATE = false;
-				if (LSL_STATE) {
-					joystick_set_axis(0, -127);
-				} else {
-					joystick_set_axis(0, 0);
-				}
+				joystick_set_axis(0, 0);
 			}
-			return false;
+		}
+		return false;
+	case GC_LSR:
+		if (record->event.pressed) {
+			LSR_STATE = true;
+			if (LSL_STATE) {
+				joystick_set_axis(0, 0);
+			} else {
+				joystick_set_axis(0, 127);
+			}
+		} else {
+			LSR_STATE = false;
+			if (LSL_STATE) {
+				joystick_set_axis(0, -127);
+			} else {
+				joystick_set_axis(0, 0);
+			}
+		}
+		return false;
 		case GC_DPU:
 			if (record->event.pressed) {
 				DPU_STATE = true;
@@ -109,38 +117,36 @@ bool process_fightstick_keycode(uint16_t keycode, keyrecord_t *record) {
 				unregister_joystick_button(16);
 			}
 			return false;
-		case GC_DPL:
-			if (record->event.pressed) {
-				DPL_STATE = true;
-				if (DPR_STATE) {
-					unregister_joystick_button(17);
-				} else {
-					register_joystick_button(15);
-				}
-			} else {
-				DPL_STATE = false;
+	case GC_DPL:
+		if (record->event.pressed) {
+			DPL_STATE = true;
+			if (!DPR_STATE) {
+				register_joystick_button(15);
+			}
+		} else {
+			DPL_STATE = false;
+			unregister_joystick_button(15);
+			if (DPR_STATE) {
+				register_joystick_button(17);
+			}
+		}
+		return false;
+	case GC_DPR:
+		if (record->event.pressed) {
+			DPR_STATE = true;
+			if (DPL_STATE) {
 				unregister_joystick_button(15);
-				if (DPR_STATE) {
-					register_joystick_button(17);
-				}
-			}
-			return false;
-		case GC_DPR:
-			if (record->event.pressed) {
-				DPR_STATE = true;
-				if (DPL_STATE) {
-					unregister_joystick_button(15);
-				} else {
-					register_joystick_button(17);
-				}
 			} else {
-				DPR_STATE = false;
-				unregister_joystick_button(17);
-				if (DPL_STATE) {
-					register_joystick_button(15);
-				}
+				register_joystick_button(17);
 			}
-			return false;
+		} else {
+			DPR_STATE = false;
+			unregister_joystick_button(17);
+			if (DPL_STATE) {
+				register_joystick_button(15);
+			}
+		}
+		return false;
 		case GC_RSU:
 			if (record->event.pressed) {
 				RSU_STATE = true;
@@ -169,32 +175,40 @@ bool process_fightstick_keycode(uint16_t keycode, keyrecord_t *record) {
 				}
 			}
 			return false;
-		case GC_RSL:
-			if (record->event.pressed) {
-				RSL_STATE = true;
-				joystick_set_axis(3, -127);
+	case GC_RSL:
+		if (record->event.pressed) {
+			RSL_STATE = true;
+			if (RSR_STATE) {
+				joystick_set_axis(3, 0);
 			} else {
-				RSL_STATE = false;
-				if (RSR_STATE) {
-					joystick_set_axis(3, 127);
-				} else {
-					joystick_set_axis(3, 0);
-				}
+				joystick_set_axis(3, -127);
 			}
-			return false;
-		case GC_RSR:
-			if (record->event.pressed) {
-				RSR_STATE = true;
+		} else {
+			RSL_STATE = false;
+			if (RSR_STATE) {
 				joystick_set_axis(3, 127);
 			} else {
-				RSR_STATE = false;
-				if (RSL_STATE) {
-					joystick_set_axis(3, -127);
-				} else {
-					joystick_set_axis(3, 0);
-				}
+				joystick_set_axis(3, 0);
 			}
-			return false;
+		}
+		return false;
+	case GC_RSR:
+		if (record->event.pressed) {
+			RSR_STATE = true;
+			if (RSL_STATE) {
+				joystick_set_axis(3, 0);
+			} else {
+				joystick_set_axis(3, 127);
+			}
+		} else {
+			RSR_STATE = false;
+			if (RSL_STATE) {
+				joystick_set_axis(3, -127);
+			} else {
+				joystick_set_axis(3, 0);
+			}
+		}
+		return false;
 		case GC_CRO:
 			if (record->event.pressed) {
 				register_joystick_button(0);
