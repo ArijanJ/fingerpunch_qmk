@@ -142,7 +142,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
         MO(LAYER_SYMBOL), XXXXXXX, XXXXXXX, GC_LSU, XXXXXXX, XXXXXXX, XXXXXXX, GC_SQU, GC_TRI, GC_L1, XXXXXXX, XXXXXXX,
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-        XXXXXXX, XXXXXXX, GC_LSL, GC_LSD, GC_LSR, XXXXXXX,     GC_L3, GC_CRO, GC_CIR, GC_R1, GC_R3, XXXXXXX,
+        XXXXXXX, GC_R3, GC_LSL, GC_LSD, GC_LSR, XXXXXXX,     GC_L3, GC_CRO, GC_CIR, GC_R1, GC_R3, XXXXXXX,
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
         GC_SEL, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
         // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
@@ -200,9 +200,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [LAYER_SYMBOL] = LAYOUT_ffkb(
         // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
-        _______, KC_LSFT, XXXXXXX, XXXXXXX, XXXXXXX, GAMING_TOGGLE, XXXXXXX, LSFT(KC_LBRC), KC_EQUAL, LSFT(KC_RBRC), KC_MINUS, KC_SCLN,
+        _______, KC_LSFT, XXXXXXX, G(KC_K), G(KC_O), GAMING_TOGGLE, XXXXXXX, LSFT(KC_LBRC), KC_EQUAL, LSFT(KC_RBRC), KC_MINUS, KC_SCLN,
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-        _______, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, GAMING_TOGGLE, KC_LBRC, LSFT(KC_9), KC_BSLS, LSFT(KC_0), KC_RBRC, S(KC_SCLN),
+        _______, XXXXXXX, G(KC_H), G(KC_J), G(KC_L), GAMING_TOGGLE, KC_LBRC, LSFT(KC_9), KC_BSLS, LSFT(KC_0), KC_RBRC, S(KC_SCLN),
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
         _______, XXXXXXX, XXXXXXX, GAMING_CANARY, XXXXXXX, JS_TOGGLE, XXXXXXX, XXXXXXX, XXXXXXX, KC_MINUS, S(KC_MINUS), KC_GRAVE,
         // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
