@@ -4,8 +4,8 @@
 
 #ifdef AUDIO_ENABLE
 #include "audio.h"
-#define JS_ON_SOUND EIGHTH_NOTE(_E5), EIGHTH_NOTE(_G5), EIGHTH_NOTE(_B5),
-#define JS_OFF_SOUND EIGHTH_NOTE(_B5), EIGHTH_NOTE(_G5), EIGHTH_NOTE(_E5),
+#define JS_ON_SOUND EIGHTH_NOTE(_E5),
+#define JS_OFF_SOUND EIGHTH_NOTE(_B4),
 float fp_js_on_sound[][2] = SONG(JS_ON_SOUND);
 float fp_js_off_sound[][2] = SONG(JS_OFF_SOUND);
 #endif
