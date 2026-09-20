@@ -72,6 +72,7 @@ bool is_gaming        = false;
 bool hold_mouse_layer = false;
 bool dragscrolling    = false;
 bool is_joystick_mode = false;
+bool alt_tabbing      = false;
 
 uint16_t middle_click_scroll_buffer = 0;
 
@@ -178,7 +179,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
         MO(LAYER_INTERNALS), C(S(KC_1)), C(KC_W), XXXXXXX, XXXXXXX, XXXXXXX, KC_F14, KC_F15, KC_F17, KC_F18, KC_F19, KC_F20,
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-        KC_LCTL, C(S(KC_2)), C(S(KC_3)), MEDIA, XXXXXXX, GAMING_TOGGLE, A(KC_LEFT), C(KC_TAB), C(S(KC_TAB)), A(KC_RGHT), XXXXXXX, XXXXXXX,
+        KC_LCTL, C(S(KC_2)), AT_BWD, MEDIA, AT_FWD, GAMING_TOGGLE, A(KC_LEFT), C(KC_TAB), C(S(KC_TAB)), A(KC_RGHT), XXXXXXX, XXXXXXX,
         // ├──────────────────────────────────────────────────────┤ ├───   ───────────────────────────────────────────────────┤
         FAKE_MOD, KC_LSFT, XXXXXXX, XXXXXXX, XXXXXXX, KC_MUTE, KC_F13, KC_F21, XXXXXXX, XXXXXXX, KC_F22, KC_F16,
         // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
@@ -239,9 +240,13 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 const char chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS] PROGMEM = LAYOUT_ffkb('L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R');
 
-// layer_state_t layer_state_set_user(layer_state_t state) {
-//   return update_tri_layer_state(state, _LOWER, _RAISE, _ADJUST);
-// }
+layer_state_t layer_state_set_user(layer_state_t state) {
+    if (alt_tabbing && !(state & (1UL << LAYER_BROWSE))) {
+        unregister_code(KC_LALT);
+        alt_tabbing = false;
+    }
+    return state;
+}
 
 bool encoder_update_user(uint8_t index, bool clockwise) {
     if (layer_state_is(LAYER_INTERNALS)) {
@@ -293,6 +298,21 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (keycode >= GC_LSU)
         if (!process_fightstick_keycode(keycode, record))
             return false;
+
+    if (keycode == AT_FWD || keycode == AT_BWD) {
+        if (record->event.pressed) {
+            if (!alt_tabbing) {
+                register_code(KC_LALT);
+                alt_tabbing = true;
+            }
+            if (keycode == AT_BWD) {
+                tap_code16(S(KC_TAB));
+            } else {
+                tap_code(KC_TAB);
+            }
+        }
+        return false;
+    }
 
     // if (!process_sentence_case(keycode, record)) { return false; }
     // if (!process_select_word(keycode, record)) { return false; }
