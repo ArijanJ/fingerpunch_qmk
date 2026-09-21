@@ -306,10 +306,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 alt_tabbing = true;
             }
             if (keycode == AT_BWD) {
-                tap_code16(S(KC_TAB));
+                register_code16(S(KC_TAB));
             } else {
-                tap_code(KC_TAB);
+                register_code(KC_TAB);
             }
+        } else if (keycode == AT_BWD) {
+            unregister_code16(S(KC_TAB));
+        } else {
+            unregister_code(KC_TAB);
         }
         return false;
     }
