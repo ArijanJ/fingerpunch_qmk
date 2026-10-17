@@ -157,7 +157,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
         KC_LCTL, KC_HOME, C(KC_LEFT), KC_DEL, C(KC_RGHT), C(KC_HOME), KC_LEFT, KC_DOWN, KC_UP, KC_RGHT, KC_BSPC, _______,
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-        KC_LSFT, _______, _______, _______, EE_CLR, C(KC_LEFT), KC_PGDN, _______, _______, _______, _______, _______,
+        KC_LSFT, _______, _______, _______, SEL_LINE, C(KC_LEFT), KC_PGDN, _______, _______, _______, _______, _______,
         // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
         _______, _______, KC_LSFT, _______, _______, KC_LSFT, XXXXXXX, _______
         //                            ╰───────────────────────────╯ ╰──────────────────╯
@@ -181,7 +181,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
         KC_LCTL, C(S(KC_2)), AT_BWD, MEDIA, AT_FWD, GAMING_TOGGLE, A(KC_LEFT), C(KC_TAB), C(S(KC_TAB)), A(KC_RGHT), XXXXXXX, XXXXXXX,
         // ├──────────────────────────────────────────────────────┤ ├───   ───────────────────────────────────────────────────┤
-        FAKE_MOD, KC_LSFT, XXXXXXX, XXXXXXX, XXXXXXX, KC_MUTE, KC_F13, KC_F21, XXXXXXX, XXXXXXX, KC_F22, KC_F16,
+        FAKE_MOD, KC_LSFT, G(KC_H), XXXXXXX, G(KC_L), KC_MUTE, KC_F13, KC_F21, XXXXXXX, XXXXXXX, KC_F22, KC_F16,
         // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
         _______, XXXXXXX, XXXXXXX, _______, XXXXXXX, _______, XXXXXXX, _______
         //                            ╰───────────────────────────╯ ╰──────────────────╯
@@ -389,6 +389,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         set_oneshot_mods(MOD_BIT(KC_LSFT));
         return false;
     }
+    if (keycode == SEL_LINE) {
+        if (record->event.pressed) {
+            tap_code16(KC_HOME);
+            tap_code16(S(KC_END));
+        }
+        return false;
+    }
+
     if (keycode == DELWORDBACK) {
         if (record->event.pressed) {
             clear_oneshot_mods();

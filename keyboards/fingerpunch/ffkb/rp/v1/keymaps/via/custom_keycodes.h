@@ -28,5 +28,6 @@ enum custom_keycodes { FAKE_MOD = FP_SAFE_RANGE, ZOOM_MOD, GAMING_TOGGLE, GAMING
 	GC_R3,
 	GC_STA,
 	GC_SEL,
-	GC_HOM
+	GC_HOM,
+	SEL_LINE
 };
