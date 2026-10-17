@@ -78,6 +78,9 @@ uint16_t middle_click_scroll_buffer = 0;
 
 bool sdvx_encoders = false;
 
+static int32_t native_scroll_h_remainder = 0;
+static int32_t native_scroll_v_remainder = 0;
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [LAYER_BASE] = LAYOUT_ffkb(
         // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
@@ -215,9 +218,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // ╭──────────────────────────────────────────────────────╮  ╭──────────────────────────────────────────────────────╮
         XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, FP_POINT_DPI_RESET, FP_POINT_DPI_UP, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
         // ├──────────────────────────────────────────────────────┤  ├──────────────────────────────────────────────────────┤
-        XXXXXXX, FP_ACCEL_TOG, SDVX_TOGGLE, XXXXXXX, XXXXXXX, FP_POINT_DPI_DN, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        XXXXXXX, FP_ACCEL_TOG, DRGSCRL_HID_TOGGLE, XXXXXXX, XXXXXXX, FP_POINT_DPI_DN, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
         // ├──────────────────────────────────────────────────────┤  ├──────────────────────────────────────────────────────┤
-        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, EE_CLR, QK_BOOT, XXXXXXX, EE_CLR, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, EE_CLR, QK_BOOT, SDVX_TOGGLE, EE_CLR, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
         // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
         _______, XXXXXXX, XXXXXXX, _______, XXXXXXX, _______, _______, _______
         //                            ╰───────────────────────────╯ ╰──────────────────╯
@@ -246,6 +249,20 @@ layer_state_t layer_state_set_user(layer_state_t state) {
         alt_tabbing = false;
     }
     return state;
+}
+
+// Treat the middle-click key as a mouse event so it resets the auto-mouse timer.
+bool is_mouse_record_user(uint16_t keycode, keyrecord_t *record) {
+    return keycode == DRGSCRL;
+}
+
+static bool host_is_linux              = false;
+static bool native_dragscroll_enabled  = true;
+
+bool process_detected_host_os_user(os_variant_t os) {
+    host_is_linux             = (os == OS_LINUX);
+    native_dragscroll_enabled = !host_is_linux;
+    return true;
 }
 
 bool encoder_update_user(uint8_t index, bool clockwise) {
@@ -363,14 +380,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         if (record->event.pressed) {
             dragscroll_timer           = timer_read32(); // start timer on dragscroll down
             middle_click_scroll_buffer = 0;
-            register_code16(KC_BTN8);
+            if (host_is_linux && !native_dragscroll_enabled) {
+                register_code16(KC_BTN8);
+            }
         } else { // on release
             if ((timer_elapsed32(dragscroll_timer) < 120) && middle_click_scroll_buffer < 10) {
                 tap_code16(KC_BTN3);
                 middle_click_scroll_buffer = 0;
             }
             dragscroll_timer = 0; // nullify timer on dragscroll release
-            unregister_code16(KC_BTN8);
+            native_scroll_h_remainder = 0;
+            native_scroll_v_remainder = 0;
+            if (host_is_linux) {
+                unregister_code16(KC_BTN8);
+            }
         }
         // charybdis_set_pointer_dragscroll_enabled(record->event.pressed);
         return false;
@@ -417,6 +440,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (keycode == SDVX_TOGGLE && record->event.pressed) {
         sdvx_encoders = !sdvx_encoders;
         uprintf("sdvx encoders toggled\n");
+        return false;
+    }
+
+    if (keycode == DRGSCRL_HID_TOGGLE && record->event.pressed) {
+        if (host_is_linux) {
+            native_dragscroll_enabled = !native_dragscroll_enabled;
+        }
         return false;
     }
 
@@ -699,6 +729,19 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
     // }
 
     report_mouse_t accelerated_report = mouse_report;
+
+    // Use native HID wheel deltas while drag-scrolling in native mode.
+    if (native_dragscroll_enabled && dragscrolling) {
+        native_scroll_h_remainder -= accelerated_report.x;
+        native_scroll_v_remainder -= accelerated_report.y;
+        accelerated_report.h = CONSTRAIN_HID(native_scroll_h_remainder / 2);
+        accelerated_report.v = CONSTRAIN_HID(native_scroll_v_remainder / 2);
+        native_scroll_h_remainder %= 2;
+        native_scroll_v_remainder %= 2;
+        accelerated_report.x = 0;
+        accelerated_report.y = 0;
+        return accelerated_report;
+    }
 
     // if (accelerated_report.x != 0 || accelerated_report.y != 0) {
     //     uprintf("Accelerated mouse report: x=%4d, y=%4d, buttons=%04X\n", accelerated_report.x, accelerated_report.y, accelerated_report.buttons);
