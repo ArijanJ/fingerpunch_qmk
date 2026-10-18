@@ -266,6 +266,9 @@ bool process_detected_host_os_user(os_variant_t os) {
 }
 
 bool encoder_update_user(uint8_t index, bool clockwise) {
+    static uint32_t song_skip_timer = 0;
+    static bool     song_skip_debounce_active = false;
+
     if (layer_state_is(LAYER_INTERNALS)) {
         if (index == ENC_RIGHT) {
             tap_code16(clockwise ? KC_BRIU : KC_BRID);
@@ -281,6 +284,11 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
         }
     } else if (layer_state_is(LAYER_MEDIA)) {
         if (index == ENC_RIGHT) {
+            if (song_skip_debounce_active && timer_elapsed32(song_skip_timer) < 200) {
+                return false;
+            }
+            song_skip_timer = timer_read32();
+            song_skip_debounce_active = true;
             tap_code16(clockwise ? KC_MNXT : KC_MPRV);
         } else {
             tap_code16(clockwise ? KC_BRIU : KC_BRID);
