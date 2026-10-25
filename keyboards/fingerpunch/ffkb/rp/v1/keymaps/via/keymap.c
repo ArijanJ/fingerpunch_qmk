@@ -133,11 +133,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // ╭──────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────╮
         SYM_TAB, KC_W, KC_L, KC_Y, KC_P, KC_B, KC_Z, KC_F, KC_O, KC_U, KC_QUOTE, KC_MINUS,
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-        C(KC_BSPC), KC_C, KC_R, KC_S, KC_T, KC_G, KC_M, KC_N, KC_E, KC_I, KC_A, KC_BSPC,
+        KC_LCTL, KC_C, KC_R, KC_S, KC_T, KC_G, KC_M, KC_N, KC_E, KC_I, KC_A, KC_BSPC,
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-        SFT_ESC, KC_Q, KC_J, KC_V, KC_D, KC_K, KC_X, KC_H, KC_SLSH, KC_COMM, KC_DOT, DELWORDBACK,
+        SFT_ESC, KC_Q, KC_J, KC_V, KC_D, KC_K, KC_X, KC_H, KC_SLSH, KC_COMM, KC_DOT, XXXXXXX,
         // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-        _______, OSS_THUMB, KC_SPC, SPACESHIFT, NAV_ENT, SPC_NUM, XXXXXXX, _______
+        _______, OSS_THUMB, KC_SPC, OSS_THUMB, NAV_ENT, SPC_NUM, XXXXXXX, _______
 
         //                            ╰───────────────────────────╯ ╰──────────────────╯
         ),
@@ -162,7 +162,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
         KC_LSFT, _______, _______, _______, SEL_LINE, C(KC_LEFT), KC_PGDN, _______, _______, _______, _______, _______,
         // ╰─────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
-        _______, _______, KC_LSFT, _______, _______, KC_LSFT, XXXXXXX, _______
+        _______, _______, KC_LSFT, _______, _______, KC_LSFT, KC_APP, _______
         //                            ╰───────────────────────────╯ ╰──────────────────╯
         ),
 
@@ -740,7 +740,7 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
 
     // Use native HID wheel deltas while drag-scrolling in native mode.
     if (native_dragscroll_enabled && dragscrolling) {
-        native_scroll_h_remainder -= accelerated_report.x;
+        native_scroll_h_remainder += accelerated_report.x;
         native_scroll_v_remainder -= accelerated_report.y;
         accelerated_report.h = CONSTRAIN_HID(native_scroll_h_remainder / 2);
         accelerated_report.v = CONSTRAIN_HID(native_scroll_v_remainder / 2);
