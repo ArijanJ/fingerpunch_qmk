@@ -80,6 +80,26 @@ bool sdvx_encoders = false;
 
 static int32_t native_scroll_h_remainder = 0;
 static int32_t native_scroll_v_remainder = 0;
+#define NATIVE_DRAGSCROLL_DIVISOR 1
+#define SCROLLING_DIRECTION_SNAP_RATIO 2
+
+static int32_t constrain_native_scroll(int32_t value) {
+    if (value > MOUSE_REPORT_HV_MAX) return MOUSE_REPORT_HV_MAX;
+    if (value < MOUSE_REPORT_HV_MIN) return MOUSE_REPORT_HV_MIN;
+    return value;
+}
+
+#define SCROLLING_DIRECTION_TRIGGER_DELTA 20
+typedef enum scrolling_state {
+    SCROLLING_UNDECIDED,
+    SCROLLING_HORIZONTAL,
+    SCROLLING_VERTICAL,
+    SCROLLING_OMNIDIRECTIONAL,
+} scrolling_state_t;
+
+scrolling_state_t scroll_state = SCROLLING_UNDECIDED;
+int16_t           horizontal_buffer = 0;
+int16_t           vertical_buffer = 0;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [LAYER_BASE] = LAYOUT_ffkb(
@@ -388,6 +408,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         if (record->event.pressed) {
             dragscroll_timer           = timer_read32(); // start timer on dragscroll down
             middle_click_scroll_buffer = 0;
+            scroll_state               = SCROLLING_UNDECIDED;
+            horizontal_buffer          = 0;
+            vertical_buffer            = 0;
+            native_scroll_h_remainder  = 0;
+            native_scroll_v_remainder  = 0;
             if (host_is_linux && !native_dragscroll_enabled) {
                 register_code16(KC_BTN8);
             }
@@ -397,6 +422,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 middle_click_scroll_buffer = 0;
             }
             dragscroll_timer = 0; // nullify timer on dragscroll release
+            scroll_state = SCROLLING_UNDECIDED;
+            horizontal_buffer = 0;
+            vertical_buffer = 0;
             native_scroll_h_remainder = 0;
             native_scroll_v_remainder = 0;
             if (host_is_linux) {
@@ -658,19 +686,6 @@ combo_t                key_combos[]          = {
 static int16_t custom_trackball_counter = 0;
 #define CUSTOM_TRACKBALL_TRIGGER_DELTA 40
 
-#define SCROLLING_DIRECTION_TRIGGER_DELTA 20
-typedef enum scrolling_state {
-    SCROLLING_UNDECIDED,
-    SCROLLING_HORIZONTAL,
-    SCROLLING_VERTICAL,
-} scrolling_state_t;
-
-scrolling_state_t scroll_state        = SCROLLING_UNDECIDED;
-report_mouse_t    scroll_state_buffer = {};
-
-int16_t horizontal_buffer = 0;
-int16_t vertical_buffer   = 0;
-
 static int16_t trackball_stick_x = 0;
 static int16_t trackball_stick_y = 0;
 static uint16_t trackball_idle_x = 0;
@@ -740,12 +755,52 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
 
     // Use native HID wheel deltas while drag-scrolling in native mode.
     if (native_dragscroll_enabled && dragscrolling) {
-        native_scroll_h_remainder += accelerated_report.x;
-        native_scroll_v_remainder -= accelerated_report.y;
-        accelerated_report.h = CONSTRAIN_HID(native_scroll_h_remainder / 2);
-        accelerated_report.v = CONSTRAIN_HID(native_scroll_v_remainder / 2);
-        native_scroll_h_remainder %= 2;
-        native_scroll_v_remainder %= 2;
+        if (scroll_state == SCROLLING_UNDECIDED) {
+            horizontal_buffer += accelerated_report.x;
+            vertical_buffer += accelerated_report.y;
+
+            bool horizontal_ready = abs(horizontal_buffer) > SCROLLING_DIRECTION_TRIGGER_DELTA;
+            bool vertical_ready = abs(vertical_buffer) > SCROLLING_DIRECTION_TRIGGER_DELTA;
+            if ((horizontal_ready || vertical_ready) &&
+                abs(horizontal_buffer) <= abs(vertical_buffer) * SCROLLING_DIRECTION_SNAP_RATIO &&
+                abs(vertical_buffer) <= abs(horizontal_buffer) * SCROLLING_DIRECTION_SNAP_RATIO) {
+                scroll_state = SCROLLING_OMNIDIRECTIONAL;
+            } else if (horizontal_ready &&
+                       abs(horizontal_buffer) > abs(vertical_buffer) * SCROLLING_DIRECTION_SNAP_RATIO) {
+                scroll_state = SCROLLING_HORIZONTAL;
+            } else if (vertical_ready &&
+                       abs(vertical_buffer) > abs(horizontal_buffer) * SCROLLING_DIRECTION_SNAP_RATIO) {
+                scroll_state = SCROLLING_VERTICAL;
+            }
+        }
+
+        if (scroll_state == SCROLLING_HORIZONTAL) {
+            native_scroll_h_remainder += accelerated_report.x;
+        } else if (scroll_state == SCROLLING_VERTICAL) {
+            native_scroll_v_remainder -= accelerated_report.y;
+        } else if (scroll_state == SCROLLING_OMNIDIRECTIONAL) {
+            native_scroll_h_remainder += accelerated_report.x;
+            native_scroll_v_remainder -= accelerated_report.y;
+        }
+
+        accelerated_report.h = 0;
+        accelerated_report.v = 0;
+        if (scroll_state == SCROLLING_HORIZONTAL) {
+            int32_t delta = native_scroll_h_remainder / NATIVE_DRAGSCROLL_DIVISOR;
+            accelerated_report.h = constrain_native_scroll(delta);
+            native_scroll_h_remainder -= accelerated_report.h * NATIVE_DRAGSCROLL_DIVISOR;
+        } else if (scroll_state == SCROLLING_VERTICAL) {
+            int32_t delta = native_scroll_v_remainder / NATIVE_DRAGSCROLL_DIVISOR;
+            accelerated_report.v = constrain_native_scroll(delta);
+            native_scroll_v_remainder -= accelerated_report.v * NATIVE_DRAGSCROLL_DIVISOR;
+        } else if (scroll_state == SCROLLING_OMNIDIRECTIONAL) {
+            int32_t horizontal_delta = native_scroll_h_remainder / NATIVE_DRAGSCROLL_DIVISOR;
+            int32_t vertical_delta = native_scroll_v_remainder / NATIVE_DRAGSCROLL_DIVISOR;
+            accelerated_report.h = constrain_native_scroll(horizontal_delta);
+            accelerated_report.v = constrain_native_scroll(vertical_delta);
+            native_scroll_h_remainder -= accelerated_report.h * NATIVE_DRAGSCROLL_DIVISOR;
+            native_scroll_v_remainder -= accelerated_report.v * NATIVE_DRAGSCROLL_DIVISOR;
+        }
         accelerated_report.x = 0;
         accelerated_report.y = 0;
         return accelerated_report;
