@@ -1,0 +1,2 @@
+# The package named hid, providing hid.Device (not the hidapi Python package).
+hid==1.0.8

@@ -1,4 +1,5 @@
 SRC += fightstick.c
+SRC += via_host_link.c
 
 VIA_ENABLE = yes
 

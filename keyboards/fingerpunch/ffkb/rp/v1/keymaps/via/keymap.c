@@ -2,6 +2,7 @@
 
 #include "custom_keycodes.h"
 #include "midi.h"
+#include "via_host_link.h"
 
 extern MidiDevice midi_device;
 
@@ -124,6 +125,7 @@ static void toggle_midi_mode(void) {
     } else {
         layer_off(LAYER_MIDI);
     }
+    hl_push_event(HL_EV_MIDI, midi_mode);
 }
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -530,6 +532,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
     if (keycode == SDVX_TOGGLE && record->event.pressed) {
         sdvx_encoders = !sdvx_encoders;
+        hl_push_event(HL_EV_SDVX, sdvx_encoders);
         uprintf("sdvx encoders toggled\n");
         return false;
     }
@@ -537,6 +540,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (keycode == DRGSCRL_HID_TOGGLE && record->event.pressed) {
         if (host_is_linux) {
             native_dragscroll_enabled = !native_dragscroll_enabled;
+            hl_push_event(HL_EV_NATIVE_SCROLL, native_dragscroll_enabled);
         }
         return false;
     }
@@ -551,6 +555,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 set_single_default_layer(LAYER_GAMING_CANARY);
                 combo_disable();
                 is_gaming = true;
+                hl_push_event(HL_EV_GAMING, LAYER_GAMING_CANARY);
                 return false;
             }
 
@@ -563,6 +568,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             is_gaming = !is_gaming;
             combo_toggle();
+            hl_push_event(HL_EV_GAMING, get_highest_layer(default_layer_state));
         }
         return false;
     }
@@ -572,6 +578,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             layer_invert(LAYER_JOYSTICK);
             is_joystick_mode = !is_joystick_mode;
             set_auto_mouse_enable(!is_joystick_mode);
+            hl_push_event(HL_EV_JOYSTICK, is_joystick_mode);
             #ifdef AUDIO_ENABLE
             if (is_joystick_mode) {
                 PLAY_SONG(fp_js_on_sound);

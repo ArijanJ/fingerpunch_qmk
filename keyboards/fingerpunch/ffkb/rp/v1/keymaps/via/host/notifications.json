@@ -1,0 +1,13 @@
+{
+  "10:00": "MIDI mode disabled",
+  "10:01": "MIDI mode enabled",
+  "11:00": "Joystick mode disabled",
+  "11:01": "Joystick mode enabled",
+  "12:00": "Base layout enabled",
+  "12:02": "Gaming layout enabled",
+  "12:04": "Gaming Canary layout enabled",
+  "13:00": "SDVX encoders disabled",
+  "13:01": "SDVX encoders enabled",
+  "14:00": "Host drag scrolling enabled",
+  "14:01": "Native keyboard drag scrolling enabled"
+}
