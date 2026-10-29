@@ -1,6 +1,9 @@
 #include QMK_KEYBOARD_H
 
 #include "custom_keycodes.h"
+#include "midi.h"
+
+extern MidiDevice midi_device;
 
 #ifdef AUDIO_ENABLE
 #include "audio.h"
@@ -35,6 +38,7 @@ enum keymap_layers {
     LAYER_SYMBOL,
     LAYER_INTERNALS,
     LAYER_POINTER,
+    LAYER_MIDI,
 };
 
 #define LOWER MO(_LOWER)
@@ -100,6 +104,27 @@ typedef enum scrolling_state {
 scrolling_state_t scroll_state = SCROLLING_UNDECIDED;
 int16_t           horizontal_buffer = 0;
 int16_t           vertical_buffer = 0;
+
+// Channel 1; MIDI note numbers are independent of host octave naming.
+static bool midi_mode = false;
+static uint8_t midi_velocity = 100;
+static uint8_t midi_expression = 127;
+static bool midi_held[10];
+static const uint8_t midi_notes[10] = {60, 62, 64, 65, 67, 69, 71, 72, 74, 76};
+
+static void toggle_midi_mode(void) {
+    for (uint8_t i = 0; i < 10; ++i) {
+        if (midi_held[i]) midi_send_noteoff(&midi_device, 0, midi_notes[i], 0);
+        midi_held[i] = false;
+    }
+    midi_mode = !midi_mode;
+    if (midi_mode) {
+        layer_on(LAYER_MIDI);
+        midi_send_cc(&midi_device, 0, 11, midi_expression);
+    } else {
+        layer_off(LAYER_MIDI);
+    }
+}
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [LAYER_BASE] = LAYOUT_ffkb(
@@ -259,6 +284,13 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         //                            ╰───────────────────────────╯ ╰──────────────────╯
         ),
 
+    [LAYER_MIDI] = LAYOUT_ffkb(
+        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        XXXXXXX, MIDI_NOTE_0, MIDI_NOTE_1, MIDI_NOTE_2, MIDI_NOTE_3, MIDI_NOTE_4, MIDI_NOTE_5, MIDI_NOTE_6, MIDI_NOTE_7, MIDI_NOTE_8, MIDI_NOTE_9, XXXXXXX,
+        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_X, KC_H, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX
+    ),
+
 };
 
 const char chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS] PROGMEM = LAYOUT_ffkb('L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'L', 'L', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'L', 'L', 'L', 'L', 'R', 'R', 'R', 'R');
@@ -286,6 +318,14 @@ bool process_detected_host_os_user(os_variant_t os) {
 }
 
 bool encoder_update_user(uint8_t index, bool clockwise) {
+    if (midi_mode) {
+        uint8_t *value = index == ENC_LEFT ? &midi_expression : &midi_velocity;
+        uint8_t minimum = index == ENC_LEFT ? 0 : 1;
+        if (clockwise && *value < 127) ++*value;
+        if (!clockwise && *value > minimum) --*value;
+        if (index == ENC_LEFT) midi_send_cc(&midi_device, 0, 11, midi_expression);
+        return false;
+    }
     static uint32_t song_skip_timer = 0;
     static bool     song_skip_debounce_active = false;
 
@@ -340,6 +380,21 @@ bool process_fightstick_keycode(uint16_t keycode, keyrecord_t *record);
 // -------------------
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (keycode == MIDI_MODE) {
+        if (record->event.pressed) toggle_midi_mode();
+        return false;
+    }
+    if (keycode >= MIDI_NOTE_0 && keycode <= MIDI_NOTE_9) {
+        uint8_t i = keycode - MIDI_NOTE_0;
+        if (record->event.pressed && midi_mode) {
+            midi_held[i] = true;
+            midi_send_noteon(&midi_device, 0, midi_notes[i], midi_velocity);
+        } else if (midi_held[i]) {
+            midi_held[i] = false;
+            midi_send_noteoff(&midi_device, 0, midi_notes[i], 0);
+        }
+        return false;
+    }
     if (keycode >= GC_LSU)
         if (!process_fightstick_keycode(keycode, record))
             return false;
@@ -673,10 +728,12 @@ bool is_flow_tap_key(uint16_t keycode) {
     return false;
 }
 
+const uint16_t PROGMEM midi_mode_combo[] = {KC_X, KC_H, COMBO_END};
 const uint16_t PROGMEM question_mark_combo[] = {KC_SLSH, KC_COMMA, COMBO_END};
 const uint16_t PROGMEM backspace_combo[]     = {HRA(KC_E), HRS(KC_I), COMBO_END};
 const uint16_t PROGMEM c_backspace_combo[]   = {HRG(KC_N), HRA(KC_E), HRS(KC_I), COMBO_END};
 combo_t                key_combos[]          = {
+    COMBO(midi_mode_combo, MIDI_MODE),
     COMBO(question_mark_combo, S(KC_SLSH)),
     // COMBO(backspace_combo, KC_BSPC),
     // COMBO(c_backspace_combo, C(KC_BSPC)),

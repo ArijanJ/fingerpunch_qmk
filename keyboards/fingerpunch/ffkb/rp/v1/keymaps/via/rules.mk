@@ -28,3 +28,5 @@ AUDIO_ENABLE=yes
 #	endif
 #endif
 #OPT_DEFS += -DMACCEL_ENABLE
+
+MIDI_ENABLE = yes
