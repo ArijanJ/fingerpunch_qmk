@@ -18,6 +18,8 @@
 #define HL_EV_GAMING 0x12 /* arg: resulting default layer */
 #define HL_EV_SDVX 0x13
 #define HL_EV_NATIVE_SCROLL 0x14
+#define HL_EV_MIDI_ROOT 0x15   /* arg: complete root MIDI note number */
+#define HL_EV_MIDI_OCTAVE 0x16 /* arg: complete root MIDI note number */
 
 /* Main-loop/key-processing context only. Best-effort, drop oldest on overflow. */
 void hl_push_event(uint8_t code, uint8_t arg);

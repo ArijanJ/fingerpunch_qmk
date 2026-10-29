@@ -1,5 +1,6 @@
 SRC += fightstick.c
 SRC += via_host_link.c
+SRC += midi_pitch.c
 
 VIA_ENABLE = yes
 

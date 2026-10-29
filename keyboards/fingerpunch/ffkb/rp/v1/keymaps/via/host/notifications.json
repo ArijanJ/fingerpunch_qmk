@@ -9,5 +9,7 @@
   "13:00": "SDVX encoders disabled",
   "13:01": "SDVX encoders enabled",
   "14:00": "Host drag scrolling enabled",
-  "14:01": "Native keyboard drag scrolling enabled"
+  "14:01": "Native keyboard drag scrolling enabled",
+  "15:*": "MIDI root: {note} · octave {octave}",
+  "16:*": "MIDI octave: {octave} · root {note}"
 }

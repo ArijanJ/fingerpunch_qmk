@@ -10,6 +10,8 @@ import time
 
 REPORT_LEN = 32
 PING, EVENTS, STATE, ACK = 0x20, 0x21, 0x22, 0x23
+EV_MIDI_ROOT, EV_MIDI_OCTAVE = 0x15, 0x16
+NOTE_NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
 
 def parse_events(report):
@@ -74,8 +76,18 @@ class Keyboard:
         raise OSError(f"timeout waiting for command 0x{cmd:02x}")
 
 
-def notify(messages, code, arg):
+def event_message(messages, code, arg):
     message = messages.get(f"{code:02x}:{arg:02x}")
+    if code in (EV_MIDI_ROOT, EV_MIDI_OCTAVE) and 0 <= arg <= 127:
+        if message is None:
+            message = messages.get(f"{code:02x}:*", "MIDI root: {note} · octave {octave}")
+        return (message.replace("{note}", NOTE_NAMES[arg % 12])
+                .replace("{octave}", str(arg // 12 - 1))
+                .replace("{number}", str(arg)))
+    return message
+
+
+def notify(message):
     if message:
         subprocess.run(["notify-send", "--app-name=QMK", "--expire-time=2000",
                         "Keyboard", message], check=False, timeout=3)
@@ -97,10 +109,12 @@ def listen(kb, messages, notifications):
                     if last_seq is not None and seq != ((last_seq + 1) & 0xFFFF):
                         print(f"[sequence gap: {last_seq} -> {seq}]", flush=True)
                     last_seq = seq
-                    print(f"event code=0x{code:02x} arg=0x{arg:02x} seq={seq}", flush=True)
+                    message = event_message(messages, code, arg)
+                    detail = f" — {message}" if message else ""
+                    print(f"event code=0x{code:02x} arg=0x{arg:02x} seq={seq}{detail}", flush=True)
                     if notifications:
                         try:
-                            notify(messages, code, arg)
+                            notify(message)
                         except (OSError, subprocess.TimeoutExpired) as exc:
                             print(f"notification failed: {exc}", file=sys.stderr)
                 if not events:
@@ -133,7 +147,7 @@ def main():
         parser.exit(1, "Install host/requirements.txt in a virtual environment first.\n")
     kb = Keyboard(hid, args.vid, args.pid, args.serial)
     try:
-        messages = json.loads(args.config.read_text()) if args.notify else {}
+        messages = json.loads(args.config.read_text()) if args.listen or args.notify else {}
         if not isinstance(messages, dict) or any(not isinstance(v, str) for v in messages.values()):
             raise ValueError("notification config must map event keys to strings")
         if args.ping or args.state or args.ack is not None:

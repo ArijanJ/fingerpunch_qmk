@@ -2,6 +2,7 @@
 
 #include "custom_keycodes.h"
 #include "midi.h"
+#include "midi_pitch.h"
 #include "via_host_link.h"
 
 extern MidiDevice midi_device;
@@ -108,17 +109,57 @@ int16_t           vertical_buffer = 0;
 
 // Channel 1; MIDI note numbers are independent of host octave naming.
 static bool midi_mode = false;
+static bool midi_sustain = false;
 static uint8_t midi_velocity = 100;
 static uint8_t midi_expression = 127;
-static bool midi_held[10];
-static const uint8_t midi_notes[10] = {60, 62, 64, 65, 67, 69, 71, 72, 74, 76};
+static bool midi_held[MIDI_PITCH_NOTE_COUNT];
+/* Save the actual note-on pitch so transposing held notes cannot strand them. */
+static uint8_t midi_sounding_notes[MIDI_PITCH_NOTE_COUNT];
+static int32_t midi_trackball_x, midi_trackball_y;
+#define MIDI_TRACKBALL_STEP 40
+
+static uint8_t midi_adjust_value(uint8_t value, int32_t delta, uint8_t minimum) {
+    int32_t next = value + delta;
+    if (next < minimum) return minimum;
+    if (next > 127) return 127;
+    return next;
+}
+
+static void midi_trackball_update(int16_t x, int16_t y) {
+    midi_trackball_x += x;
+    midi_trackball_y += y;
+    int32_t expression_delta = midi_trackball_x / MIDI_TRACKBALL_STEP;
+    int32_t velocity_delta = -(midi_trackball_y / MIDI_TRACKBALL_STEP);
+    midi_trackball_x %= MIDI_TRACKBALL_STEP;
+    midi_trackball_y %= MIDI_TRACKBALL_STEP;
+
+    uint8_t expression = midi_adjust_value(midi_expression, expression_delta, 0);
+    if (expression != midi_expression) {
+        midi_expression = expression;
+        midi_send_cc(&midi_device, 0, 11, midi_expression);
+    }
+    /* Velocity affects subsequent note-ons, not notes already sounding. */
+    midi_velocity = midi_adjust_value(midi_velocity, velocity_delta, 1);
+}
+
+static void midi_release_key(uint8_t index) {
+    if (!midi_held[index]) return;
+    midi_held[index] = false;
+    /* Both rows share some pitches. Release only the last key for a pitch. */
+    for (uint8_t i = 0; i < MIDI_PITCH_NOTE_COUNT; ++i) {
+        if (midi_held[i] && midi_sounding_notes[i] == midi_sounding_notes[index]) return;
+    }
+    midi_send_noteoff(&midi_device, 0, midi_sounding_notes[index], 0);
+}
 
 static void toggle_midi_mode(void) {
-    for (uint8_t i = 0; i < 10; ++i) {
-        if (midi_held[i]) midi_send_noteoff(&midi_device, 0, midi_notes[i], 0);
-        midi_held[i] = false;
+    if (midi_sustain) {
+        midi_send_cc(&midi_device, 0, 64, 0);
+        midi_sustain = false;
     }
+    for (uint8_t i = 0; i < MIDI_PITCH_NOTE_COUNT; ++i) midi_release_key(i);
     midi_mode = !midi_mode;
+    midi_trackball_x = midi_trackball_y = 0;
     if (midi_mode) {
         layer_on(LAYER_MIDI);
         midi_send_cc(&midi_device, 0, 11, midi_expression);
@@ -126,6 +167,7 @@ static void toggle_midi_mode(void) {
         layer_off(LAYER_MIDI);
     }
     hl_push_event(HL_EV_MIDI, midi_mode);
+    if (midi_mode) hl_push_event(HL_EV_MIDI_ROOT, midi_pitch_root());
 }
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -287,10 +329,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         ),
 
     [LAYER_MIDI] = LAYOUT_ffkb(
-        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+        XXXXXXX, XXXXXXX, MIDI_BLACK_1, MIDI_BLACK_2, XXXXXXX, MIDI_BLACK_4, MIDI_BLACK_5, MIDI_BLACK_6, XXXXXXX, MIDI_BLACK_8, MIDI_BLACK_9, XXXXXXX,
         XXXXXXX, MIDI_NOTE_0, MIDI_NOTE_1, MIDI_NOTE_2, MIDI_NOTE_3, MIDI_NOTE_4, MIDI_NOTE_5, MIDI_NOTE_6, MIDI_NOTE_7, MIDI_NOTE_8, MIDI_NOTE_9, XXXXXXX,
         XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_X, KC_H, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
-        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX
+        XXXXXXX, XXXXXXX, MIDI_SUSTAIN, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX
     ),
 
 };
@@ -321,11 +363,11 @@ bool process_detected_host_os_user(os_variant_t os) {
 
 bool encoder_update_user(uint8_t index, bool clockwise) {
     if (midi_mode) {
-        uint8_t *value = index == ENC_LEFT ? &midi_expression : &midi_velocity;
-        uint8_t minimum = index == ENC_LEFT ? 0 : 1;
-        if (clockwise && *value < 127) ++*value;
-        if (!clockwise && *value > minimum) --*value;
-        if (index == ENC_LEFT) midi_send_cc(&midi_device, 0, 11, midi_expression);
+        if (index == ENC_LEFT) {
+            if (midi_pitch_change_root(clockwise)) hl_push_event(HL_EV_MIDI_ROOT, midi_pitch_root());
+        } else if (index == ENC_RIGHT && midi_pitch_change_octave(clockwise)) {
+            hl_push_event(HL_EV_MIDI_OCTAVE, midi_pitch_root());
+        }
         return false;
     }
     static uint32_t song_skip_timer = 0;
@@ -386,14 +428,33 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         if (record->event.pressed) toggle_midi_mode();
         return false;
     }
-    if (keycode >= MIDI_NOTE_0 && keycode <= MIDI_NOTE_9) {
+    if (keycode == MIDI_SUSTAIN) {
+        if (record->event.pressed && midi_mode && !midi_sustain) {
+            midi_sustain = true;
+            midi_send_cc(&midi_device, 0, 64, 127);
+        } else if (!record->event.pressed && midi_sustain) {
+            midi_sustain = false;
+            midi_send_cc(&midi_device, 0, 64, 0);
+        }
+        return false;
+    }
+    if (keycode >= MIDI_NOTE_0 && keycode <= MIDI_BLACK_9) {
         uint8_t i = keycode - MIDI_NOTE_0;
         if (record->event.pressed && midi_mode) {
+            midi_release_key(i);
+            midi_sounding_notes[i] = midi_pitch_note(i);
+            if (midi_sounding_notes[i] == MIDI_PITCH_NONE) return false;
             midi_held[i] = true;
-            midi_send_noteon(&midi_device, 0, midi_notes[i], midi_velocity);
-        } else if (midi_held[i]) {
-            midi_held[i] = false;
-            midi_send_noteoff(&midi_device, 0, midi_notes[i], 0);
+            bool already_sounding = false;
+            for (uint8_t j = 0; j < MIDI_PITCH_NOTE_COUNT; ++j) {
+                if (j != i && midi_held[j] && midi_sounding_notes[j] == midi_sounding_notes[i]) {
+                    already_sounding = true;
+                    break;
+                }
+            }
+            if (!already_sounding) midi_send_noteon(&midi_device, 0, midi_sounding_notes[i], midi_velocity);
+        } else {
+            midi_release_key(i);
         }
         return false;
     }
@@ -759,6 +820,12 @@ static uint16_t trackball_idle_y = 0;
 #define TRACKBALL_STICK_IDLE_THRESHOLD 50
 
 report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
+    if (midi_mode) {
+        midi_trackball_update(mouse_report.x, mouse_report.y);
+        mouse_report.x = mouse_report.y = 0;
+        mouse_report.h = mouse_report.v = 0;
+        return mouse_report;
+    }
     if (is_joystick_mode) {
         trackball_stick_x += mouse_report.x * TRACKBALL_STICK_SENSITIVITY;
         trackball_stick_y += mouse_report.y * TRACKBALL_STICK_SENSITIVITY;
