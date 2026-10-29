@@ -20,6 +20,8 @@
 #define HL_EV_NATIVE_SCROLL 0x14
 #define HL_EV_MIDI_ROOT 0x15   /* arg: complete root MIDI note number */
 #define HL_EV_MIDI_OCTAVE 0x16 /* arg: complete root MIDI note number */
+#define HL_EV_MIDI_CHORD 0x17  /* arg: 0 triads, 1 diatonic 7ths, 2 dominant/minor 7ths */
+#define HL_EV_MIDI_SCALE 0x18  /* arg: 0 major, 1 natural minor (chords only) */
 
 /* Main-loop/key-processing context only. Best-effort, drop oldest on overflow. */
 void hl_push_event(uint8_t code, uint8_t arg);

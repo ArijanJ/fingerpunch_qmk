@@ -3,8 +3,8 @@
 | Check | Result |
 | --- | --- |
 | `qmk compile -kb fingerpunch/ffkb/rp/v1 -km via` | Exit 0; linked and created `fingerpunch_ffkb_rp_v1_via.uf2`. No duplicate-symbol or missing-prototype errors. |
-| Same build with `-e VIA_ENABLE=no -e TARGET=fingerpunch_ffkb_rp_v1_via_no_via` | Passed earlier and created a separately named UF2, before the latest trackball, piano-layout, and root-boundary changes. Current full non-VIA firmware rebuild is pending; automated host-link stub test still passes. |
-| `python3 -m unittest discover -s host -v` | Seven tests passed, including compiling/executing the actual firmware module, MIDI pitch module, and MIDI key-processing branches with test stubs. |
+| Same build with `-e VIA_ENABLE=no -e TARGET=fingerpunch_ffkb_rp_v1_via_no_via` | Exit 0 after chord implementation, before dual sustain; separately named UF2. Latest dual-sustain full non-VIA rebuild not run; automated stub path passes. |
+| `python3 -m unittest discover -s host -v` | Nine tests passed, including compiling/executing the actual firmware module, MIDI pitch/chord module, and MIDI key-processing branches with test stubs. |
 | `git diff --check` | Passed. |
 | Install `host/requirements.txt` into temporary venv | Successfully installed `hid==1.0.8`; confirmed `Device.read(size, timeout=None)` API. |
 | Run host `--ping` against hardware | Exit 1: `unable to open device`. HID enumeration finds a matching device, but access is unavailable in this environment. |
@@ -19,6 +19,10 @@
 | VIA piano-row assignment values | Lower row starts `0x7E84`; upper slots retain `0x7E8E`–`0x7E97`, with slots 0, 3, and 7 silent. Existing numeric IDs preserved. |
 | Root octave-boundary regression | Fixed same-octave pitch-class wrapping (C4 down incorrectly selected B4). Tests verify C4 → B3, B3 → C4, C4 → C#4, both range limits, and octave-knob steps. Host event arguments still carry the complete MIDI root number; no wire-format change. Physical verification pending. |
 | MIDI sustain thumb | Automated checks passed for CC 64=127 on press, 0 on release, duplicate-press suppression, ignored inactive presses, and mode-exit cleanup. Physical synth/pedal verification pending. |
+| Chord voicings | Automated checks passed for all 10 degrees × 3 types × 2 scales × 108 roots, including exact pitches, complete-voicing octave adjustment at the upper limit, and key snapshots. Physical chord/DAW verification pending. |
+| Combined held-note arrays | Automated checks passed for overlapping chords/single notes, shared-note reference counts, release after root/type/scale changes, and mode exit with chords plus sustain. No arpeggiator implemented. |
+| Chord controls and notifications | Compiled actual enum values: chord keys `0x7E99..0x7EA2`, type cycle `0x7EA3`, scale toggle `0x7EA4`, MIDI exit `0x7E83`. New events `0x17/0x18` have tested notification mappings. Physical VIA assignments pending. |
+| Dual sustain and scale-toggle investigation | Latest VIA build passed. Tests check both pedal orders, overlap/release, mode-exit cleanup, inactive presses, MIDI-layer thumb positions, and scale-toggle event 0x18 with C-major/minor thirds. Major/minor handler and pitches passed. The user later clarified that the old physical assignment was a knob press, not a thumb; see correction below. Right sustain appended as `0x7EA5`. |
 
 The recorded QMK builds report existing board metadata diagnostics (missing
 `keyboard.json`, layout metadata and header-defined `LAYOUT_ffkb`), the existing
@@ -37,8 +41,17 @@ The temporary Python environment used for host-library verification was
 ## Handoff
 
 Latest VIA UF2: repository-root `fingerpunch_ffkb_rp_v1_via.uf2`, rebuilt after
-the absolute-root fix and sustain thumb. Current source and new `midi_pitch.c/.h` have uncommitted
-changes. Firmware tests still use stubs for hardware-dependent calls. Remaining
-checks are physical MIDI/trackball behavior, VIA regression/coexistence, and a
-fresh full non-VIA build if required. See the keymap's `AGENTS.md` for the current
-controls and maintenance rules.
+the absolute-root fix, both sustain thumbs, and chord controls. Latest VIA build
+passes; the non-VIA build passed before dual sustain. Source and documentation changes remain
+uncommitted. Firmware tests still use stubs for hardware-dependent calls.
+Remaining checks are physical MIDI/chord/trackball behavior and VIA regression/
+coexistence. Update saved VIA layer-13 assignments and installed host files as
+described in README. See the keymap's `AGENTS.md` for current maintenance rules.
+
+## Physical layout correction
+
+The user clarified that K32/K3B are knob presses. Major/minor was mistakenly
+assigned to the left knob. It now uses the last left thumb K36 (matrix 5,5),
+immediately right of sustain. Both knob presses are unused in MIDI mode.
+Tests check the corrected layout positions; update saved VIA layer 13 by moving
+Any 0x7EA4 from the left knob press to K36. Physical verification remains pending.

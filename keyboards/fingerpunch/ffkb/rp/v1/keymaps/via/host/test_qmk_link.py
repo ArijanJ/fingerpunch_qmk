@@ -20,6 +20,15 @@ class FakeDevice:
 
 
 class HostTests(unittest.TestCase):
+    def test_chord_mode_notifications(self):
+        import json
+        messages = json.loads(Path(__file__).with_name("notifications.json").read_text())
+        self.assertIn("triads", event_message(messages, 0x17, 0))
+        self.assertIn("diatonic sevenths", event_message(messages, 0x17, 1))
+        self.assertIn("minor sevenths", event_message(messages, 0x17, 2))
+        self.assertIn("major", event_message(messages, 0x18, 0))
+        self.assertIn("natural minor", event_message(messages, 0x18, 1))
+
     def test_midi_names_octaves_and_templates(self):
         messages = {"15:*": "root {note}, octave {octave}, MIDI {number}",
                     "16:*": "octave {octave}, root {note}"}
@@ -80,6 +89,18 @@ class HostTests(unittest.TestCase):
 
 
 class FirmwareTests(unittest.TestCase):
+    def test_midi_layer_thumb_assignments(self):
+        import re
+        keymap = (Path(__file__).resolve().parents[1] / "keymap.c").read_text()
+        layout = re.search(r"\[LAYER_MIDI\]\s*=\s*LAYOUT_ffkb\((.*?)\n\s*\)", keymap, re.S)
+        self.assertIsNotNone(layout)
+        keys = [key.strip() for key in layout.group(1).split(",") if key.strip()]
+        self.assertEqual(len(keys), 44)
+        self.assertEqual(keys[36:40], ["XXXXXXX", "MIDI_CHORD_NEXT", "MIDI_SUSTAIN", "MIDI_SCALE_TOGGLE"])
+        self.assertEqual(keys[41], "MIDI_SUSTAIN_RIGHT")
+        self.assertEqual(keys[43], "XXXXXXX")
+        self.assertEqual(keys[24], "MIDI_MODE")
+
     def test_pitch_ranges_and_held_notes_use_original_pitch(self):
         source = Path(__file__).resolve().parents[1]
         keymap = (source / "keymap.c").read_text()
@@ -105,17 +126,23 @@ class FirmwareTests(unittest.TestCase):
 #define MIDI_BLACK_2 112
 #define MIDI_BLACK_9 119
 #define MIDI_SUSTAIN 120
+#define MIDI_CHORD_0 121
+#define MIDI_CHORD_9 130
+#define MIDI_CHORD_NEXT 131
+#define MIDI_SCALE_TOGGLE 132
+#define MIDI_SUSTAIN_RIGHT 133
 typedef struct { struct { bool pressed; } event; } keyrecord_t;
 static int midi_device;
 static uint8_t last_on, last_off, last_velocity, last_cc, last_cc_value;
 static unsigned off_count, cc_count, on_count;
+static uint8_t last_event_code, last_event_arg;
 typedef struct { int16_t x, y, h, v; uint8_t buttons; } report_mouse_t;
 static void midi_send_noteoff(int *d, int c, uint8_t n, int v) { (void)d; (void)c; (void)v; last_off=n; ++off_count; }
 static void midi_send_noteon(int *d, int c, uint8_t n, int v) { (void)d; (void)c; last_velocity=v; last_on=n; ++on_count; }
 static void midi_send_cc(int *d, int c, int cc, int v) { (void)d; (void)c; last_cc=cc; last_cc_value=v; ++cc_count; }
 static void layer_on(int layer) { (void)layer; }
 static void layer_off(int layer) { (void)layer; }
-void hl_push_event(uint8_t code, uint8_t arg) { (void)code; (void)arg; }
+void hl_push_event(uint8_t code, uint8_t arg) { last_event_code=code; last_event_arg=arg; }
 ''' + state + '\nstatic report_mouse_t process_pointer(report_mouse_t mouse_report) {' + pointing + '''
 return mouse_report;
 }
@@ -141,13 +168,83 @@ int main(void) {
     process_note(MIDI_SUSTAIN, &press); assert(cc_count == sustain_cc + 1);
     process_note(MIDI_SUSTAIN, &release);
     assert(last_cc == 64 && last_cc_value == 0 && !midi_sustain);
+    /* Either pedal can hold sustain; releasing one must not release the other. */
+    sustain_cc = cc_count;
     process_note(MIDI_SUSTAIN, &press);
+    process_note(MIDI_SUSTAIN_RIGHT, &press);
+    process_note(MIDI_SUSTAIN, &release);
+    assert(midi_sustain == 2 && last_cc_value == 127 && cc_count == sustain_cc + 1);
+    process_note(MIDI_SUSTAIN_RIGHT, &release);
+    assert(!midi_sustain && last_cc_value == 0 && cc_count == sustain_cc + 2);
+    sustain_cc = cc_count;
+    process_note(MIDI_SUSTAIN_RIGHT, &press);
+    process_note(MIDI_SUSTAIN, &press);
+    process_note(MIDI_SUSTAIN_RIGHT, &release);
+    assert(midi_sustain == 1 && cc_count == sustain_cc + 1);
+    process_note(MIDI_SUSTAIN, &release);
+    assert(!midi_sustain && cc_count == sustain_cc + 2);
+    process_note(MIDI_SUSTAIN, &press);
+    process_note(MIDI_SUSTAIN_RIGHT, &press);
     process_note(MIDI_MODE, &press);
     assert(last_cc == 64 && last_cc_value == 0 && !midi_sustain);
     sustain_cc = cc_count;
     process_note(MIDI_SUSTAIN, &release); assert(cc_count == sustain_cc);
+    process_note(MIDI_SUSTAIN_RIGHT, &release); assert(cc_count == sustain_cc);
+    process_note(MIDI_SUSTAIN_RIGHT, &press); assert(!midi_sustain && cc_count == sustain_cc);
     process_note(MIDI_MODE, &press);
     unsigned initial_cc = cc_count;
+    /* The scale toggle acts on press, changes chord thirds, and reports it. */
+    process_note(MIDI_SCALE_TOGGLE, &press);
+    assert(midi_chord_is_minor() && last_event_code == HL_EV_MIDI_SCALE && last_event_arg == 1);
+    process_note(MIDI_SCALE_TOGGLE, &release); assert(midi_chord_is_minor());
+    process_note(MIDI_CHORD_0, &press);
+    assert(midi_key_notes[20][0] == 60 && midi_key_notes[20][1] == 63 && midi_key_notes[20][2] == 67);
+    process_note(MIDI_CHORD_0, &release);
+    process_note(MIDI_SCALE_TOGGLE, &press);
+    assert(!midi_chord_is_minor() && last_event_code == HL_EV_MIDI_SCALE && last_event_arg == 0);
+    /* Diatonic C major triad and Em share E/G; single C is shared too. */
+    process_note(MIDI_CHORD_0, &press);
+    assert(midi_key_note_count[20] == 3);
+    assert(midi_key_notes[20][0] == 60 && midi_key_notes[20][1] == 64 && midi_key_notes[20][2] == 67);
+    unsigned chord_ons = on_count, chord_offs = off_count;
+    process_note(MIDI_NOTE_0, &press); assert(on_count == chord_ons && midi_note_refs[60] == 2);
+    process_note(MIDI_CHORD_0 + 2, &press); assert(on_count == chord_ons + 1);
+    process_note(MIDI_CHORD_0, &release); assert(off_count == chord_offs);
+    process_note(MIDI_CHORD_0 + 2, &release); assert(off_count == chord_offs + 3);
+    process_note(MIDI_NOTE_0, &release); assert(off_count == chord_offs + 4);
+    for (unsigned note=0; note<128; ++note) assert(midi_note_refs[note] == 0);
+
+    /* Chords keep their original snapshots through settings changes. */
+    process_note(MIDI_CHORD_0, &press);
+    process_note(MIDI_SCALE_TOGGLE, &press);
+    process_note(MIDI_CHORD_NEXT, &press);
+    assert(midi_chord_is_minor() && midi_chord_type() == MIDI_CHORD_SEVENTH);
+    midi_pitch_change_root(true);
+    midi_pitch_change_octave(true);
+    assert(midi_key_notes[20][0] == 60 && midi_key_notes[20][2] == 67);
+    chord_offs = off_count;
+    process_note(MIDI_CHORD_0, &release); assert(off_count == chord_offs + 3);
+    midi_pitch_change_octave(false); midi_pitch_change_root(false);
+    uint8_t notes[4];
+    assert(midi_chord_notes(0, notes) == 4);
+    assert(notes[0] == 60 && notes[1] == 63 && notes[2] == 67 && notes[3] == 70);
+    process_note(MIDI_CHORD_NEXT, &press);
+    assert(midi_chord_type() == MIDI_CHORD_DOMINANT);
+    assert(midi_chord_notes(0, notes) == 4 && notes[1] == 63 && notes[3] == 70);
+    process_note(MIDI_SCALE_TOGGLE, &press);
+    assert(!midi_chord_is_minor());
+    assert(midi_chord_notes(0, notes) == 4 && notes[1] == 64 && notes[3] == 70);
+    process_note(MIDI_CHORD_NEXT, &press);
+    assert(midi_chord_type() == MIDI_CHORD_TRIAD);
+    process_note(MIDI_CHORD_0 + 6, &press); /* B diminished */
+    assert(midi_key_notes[26][0] == 71 && midi_key_notes[26][1] == 74 && midi_key_notes[26][2] == 77);
+    process_note(MIDI_SUSTAIN, &press);
+    process_note(MIDI_MODE, &press);
+    assert(!midi_sustain && last_cc == 64 && last_cc_value == 0);
+    for (unsigned note=0; note<128; ++note) assert(midi_note_refs[note] == 0);
+    for (unsigned key=0; key<MIDI_PLAY_KEY_COUNT; ++key) assert(midi_key_note_count[key] == 0);
+    process_note(MIDI_MODE, &press);
+    initial_cc = cc_count;
     report_mouse_t mouse = process_pointer((report_mouse_t){.x=-39, .y=-39, .h=3, .v=4, .buttons=1});
     assert(mouse.x == 0 && mouse.y == 0 && mouse.h == 0 && mouse.v == 0 && mouse.buttons == 1);
     assert(cc_count == initial_cc && midi_velocity == 100);
@@ -233,6 +330,38 @@ int main(void) {
                 assert(off_count == offs + (black[i] != 255));
             }
             assert(chromatic == ((1u << 17) - 1)); /* every semitone, no gaps */
+            /* Every chord shape follows the chosen scale, at every root. */
+            for (unsigned scale=0; scale<2; ++scale) {
+                const uint8_t major_scale[7] = {0,2,4,5,7,9,11};
+                const uint8_t minor_scale[7] = {0,2,3,5,7,8,10};
+                const uint8_t *steps = scale ? minor_scale : major_scale;
+                assert(midi_chord_is_minor() == (bool)scale);
+                for (unsigned type=0; type<3; ++type) {
+                    assert(midi_chord_type() == (midi_chord_type_t)type);
+                    for (unsigned degree=0; degree<10; ++degree) {
+                        uint8_t count = midi_chord_notes(degree, notes);
+                        assert(count == (type == 0 ? 3 : 4));
+                        int expected[4];
+                        for (unsigned voice=0; voice<count; ++voice) {
+                            unsigned d = degree + voice * 2;
+                            if (type == 2) {
+                                const uint8_t shape[4] = {0, scale ? 3 : 4, 7, 10};
+                                expected[voice] = current_root + (degree/7)*12 + steps[degree%7] + shape[voice];
+                            } else expected[voice] = current_root + (d/7)*12 + steps[d%7];
+                        }
+                        int shift = expected[count-1] > 127 ? 12 : 0;
+                        process_note(MIDI_CHORD_0 + degree, &press);
+                        assert(midi_key_note_count[20+degree] == count);
+                        for (unsigned voice=0; voice<count; ++voice) {
+                            assert(notes[voice] == expected[voice]-shift && notes[voice] <= 127);
+                            assert(midi_key_notes[20+degree][voice] == notes[voice]);
+                        }
+                        process_note(MIDI_CHORD_0 + degree, &release);
+                    }
+                    midi_chord_cycle_type();
+                }
+                midi_chord_toggle_minor();
+            }
             if (current_root < 107) assert(midi_pitch_change_root(true));
         }
     }

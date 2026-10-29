@@ -11,6 +11,7 @@ import time
 REPORT_LEN = 32
 PING, EVENTS, STATE, ACK = 0x20, 0x21, 0x22, 0x23
 EV_MIDI_ROOT, EV_MIDI_OCTAVE = 0x15, 0x16
+EV_MIDI_CHORD, EV_MIDI_SCALE = 0x17, 0x18
 NOTE_NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
 

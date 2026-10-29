@@ -11,5 +11,10 @@
   "14:00": "Host drag scrolling enabled",
   "14:01": "Native keyboard drag scrolling enabled",
   "15:*": "MIDI root: {note} · octave {octave}",
-  "16:*": "MIDI octave: {octave} · root {note}"
+  "16:*": "MIDI octave: {octave} · root {note}",
+  "17:00": "MIDI chords: diatonic triads",
+  "17:01": "MIDI chords: diatonic sevenths",
+  "17:02": "MIDI chords: dominant sevenths (major) / minor sevenths (minor)",
+  "18:00": "MIDI chord scale: major",
+  "18:01": "MIDI chord scale: natural minor"
 }

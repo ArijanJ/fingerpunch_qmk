@@ -3,24 +3,43 @@
 This keymap retains VIA and adds a private, polled raw HID command channel.
 No USB interfaces, usage IDs, report sizes, or VIA protocol versions change.
 Events currently describe MIDI mode, joystick mode, gaming layout, SDVX encoder
-mode, the Linux native drag-scroll toggle, and MIDI root/octave changes. Event
+mode, the Linux native drag-scroll toggle, and MIDI root/octave/chord settings. Event
 emission never sends USB reports. Normal keys, notes, encoder ticks outside MIDI
 mode, and automatic layer changes do not generate notifications.
 
 ## MIDI root and octave knobs
 
-Toggle MIDI mode with the X+H combo. While MIDI mode is active:
+Enter MIDI mode with the X+H combo. Exit using the bottom-left edge key
+(`MIDI_MODE`); the former MIDI-layer X/H positions are now chord keys.
+While MIDI mode is active:
 
 - **Left encoder:** clockwise raises the root by one semitone,
   counterclockwise lowers it. B/C crosses octaves smoothly: C4 → B3 downward,
   B4 → C5 upward. The host's octave display follows that crossing.
 - **Right encoder:** clockwise raises the octave; counterclockwise lowers it.
-- **Left middle thumb** (normally the NAV/Space key): hold for sustain.
-  `MIDI_SUSTAIN` sends MIDI channel 1 CC 64 value 127 on press and 0 on release.
-  Leaving MIDI mode also clears an active pedal. The synth handles sustain;
-  note-off events are still sent normally. Outside MIDI mode, this thumb keeps
-  its existing binding. If VIA retains the old MIDI-layer thumb assignment,
-  set this key to Any `0x7E98` (matrix row 5, column 3; MIDI layer 13).
+- **Thumb immediately left of sustain** (`K34`): cycle triads → diatonic
+  sevenths → dominant/minor sevenths → triads.
+- **Last left thumb, immediately right of sustain** (`K36`): toggle the chord scale between major and
+  natural minor. Startup is major/triads. These settings survive mode toggles
+  but reset on firmware reboot. Both piano rows keep their chromatic mapping.
+- **Bottom row:** ten chord keys for scale degrees I through VII, then I–III
+  one octave higher. Chord roots follow the selected major/natural-minor scale.
+  Triads and diatonic sevenths stack thirds from that scale. The third setting
+  uses a dominant seventh shape (`0,4,7,10`) in major and a minor seventh shape
+  (`0,3,7,10`) in minor, as requested; this setting is not diatonic harmonization.
+  For example, at C, the tonic modes are C–E–G / C–E–G–B / C–E–G–Bb in major,
+  or C–Eb–G / C–Eb–G–Bb / C–Eb–G–Bb in minor. The minor tonic's last two modes
+  coincide, but other scale degrees can differ. Near MIDI's upper limit, a
+  whole chord shifts down one octave to keep its pitches legal.
+- **Both middle thumbs** (normally left NAV/Space and right Number/Space):
+  hold either for sustain. Left `MIDI_SUSTAIN` and right `MIDI_SUSTAIN_RIGHT`
+  send MIDI channel 1 CC 64 value 127 when the first presses and 0 when the last
+  releases. Holding both keeps the pedal on until both are released.
+  Leaving MIDI mode also clears both pedal keys. The synth handles sustain;
+  note-off events are still sent normally. Outside MIDI mode, the thumbs keep
+  their existing bindings. If VIA retains old MIDI-layer assignments, set left
+  to Any `0x7E98` (matrix row 5, column 3) and right to Any `0x7EA5` (row 5,
+  column 7), on layer 13. Use distinct keycodes for correct overlap handling.
 - **Home row:** the piano's ten white-key positions. **Top row:** black-key
   positions with the familiar two/three grouping. At root C4:
 
@@ -59,6 +78,23 @@ Run `--listen` to print translated changes or `--notify` for desktop feedback:
 `MIDI root: C# · octave 4`, `MIDI octave: 5 · root C#`. Enabling MIDI mode also
 reports the current root. The host uses MIDI 60 = C4; some DAWs label octaves
 differently, though the transmitted note numbers are the same.
+Chord-type and major/minor changes also print/display notifications; the current
+settings are reported when MIDI mode is enabled. Copy updated host files to the
+installed service directory if using the optional service.
+
+## Held-note storage for future development
+
+No chord library or extra dependency is required. `midi_pitch.c` builds chord
+voicings. `keymap.c` snapshots every held key's actual pitches in
+`midi_key_notes[30][4]` with `midi_key_note_count[30]`: slots 0–19 are piano
+positions and 20–29 are chord keys. Entries beyond each count are inactive.
+`midi_note_refs[128]` is the combined held-note pool: a positive count means
+one or more held keys own that MIDI pitch. Shared pitches send only one note-on
+and send note-off when the final owner releases. Root/octave/chord/scale changes
+affect future presses; held snapshots remain stable. Leaving MIDI mode clears
+all owners and the sustain pedal. These arrays track physically held notes,
+not notes latched by the receiving synth's sustain behavior.
+An arpeggiator is not implemented yet; these arrays are available for that work.
 
 ## Build and flash
 
@@ -170,10 +206,15 @@ control LEDs.
 | `14` Native keyboard drag scrolling | 0 host scrolling, 1 native scrolling |
 | `15` MIDI root changed / MIDI mode enabled | complete root MIDI note number |
 | `16` MIDI octave changed | complete root MIDI note number |
+| `17` MIDI chord type changed / MIDI mode enabled | 0 triads, 1 diatonic sevenths, 2 dominant (major) / minor sevenths (minor) |
+| `18` MIDI chord scale changed / MIDI mode enabled | 0 major, 1 natural minor |
 
 The new event codes are additive; the version-1 wire format is unchanged. Both
 MIDI pitch events carry the complete root number so each message can independently
 derive pitch class (`number % 12`) and octave (`number // 12 - 1`).
+Chord/scale events are also additive; packet framing and protocol version stay
+unchanged. GET_STATE still contains only layers, modifiers, and the test ack
+byte; it is not a MIDI-settings query.
 
 This is best-effort notification delivery. GET_EVENTS dequeues before receipt
 is confirmed, so transport failures can lose events. Sends occur only in the
@@ -250,8 +291,9 @@ The old minor-row keycode numbers were preserved and renamed `MIDI_BLACK_0`
 through `MIDI_BLACK_9`. Slots 0, 3, and 7 are now silent even if VIA still has
 those old numeric assignments. If you already loaded the previous minor row,
 its saved assignments therefore produce the new piano pattern after flashing.
-The lower row starts at `0x7E84`. Recheck numeric values if the custom-keycode
-enums change. No host event IDs or listener updates are needed.
+The home row starts at `0x7E84`. Recheck numeric values if the custom-keycode
+enums change. This piano layout alone requires no listener change; the chord
+controls add notification mappings described below.
 
 To check the layout, release all notes, select C, and verify C# and D# on the
 upper row followed by F#, G#, and A#. Combine both rows to play every chromatic
@@ -261,3 +303,63 @@ Notes held across a root change intentionally retain their old pitch.
 Automated tests check actual note-on output, silent positions, and complete
 chromatic coverage at all twelve roots and supported octaves; listening tests
 remain manual.
+
+### VIA chord assignments and testing
+
+All values below were checked by compiling the current custom-keycode enums.
+On MIDI layer 13, map the bottom row as follows (the two edge keys surround
+the ten chord positions):
+
+```text
+Bottom: 0x7E83  0x7E99 0x7E9A 0x7E9B 0x7E9C 0x7E9D 0x7E9E 0x7E9F 0x7EA0 0x7EA1 0x7EA2  KC_NO
+Knob/thumb: KC_NO  0x7EA3  0x7E98  0x7EA4  KC_NO  0x7EA5  KC_NO  KC_NO
+```
+
+The bottom-left edge exits MIDI mode. The eight trailing arguments are the
+left knob press, three left thumbs, three right thumbs, and right knob press.
+The three left thumbs are chord-type cycle, sustain, and major/minor toggle;
+the middle right thumb is sustain. Both knob presses are unused. If flashing leaves
+the saved VIA layer unchanged, enter these Any values manually after backing up
+your layout. Outside MIDI mode, existing keyboard bindings remain in place.
+
+In a MIDI monitor, verify C-major tonic triad `60,64,67`, diatonic seventh
+`60,64,67,71`, and dominant seventh `60,64,67,70`. Switch to minor and check
+`60,63,67`, then `60,63,67,70` in both seventh settings for the tonic. Check other
+degrees too: e.g. the major scale's second diatonic seventh is Dm7, while its
+third setting is D7. Hold overlapping chords plus a single shared piano note;
+release keys one at a time and confirm shared notes last until the final owner
+releases. Change root/octave/type/scale while holding a chord, then release and
+check for stuck notes. Exit MIDI while holding chords and sustain; all tracked
+notes and pedal must clear.
+
+For chord/scale notifications in an installed service, copy updated
+`host/qmk_link.py` and `host/notifications.json` to `~/.local/share/qmk-link/` and
+restart `qmk-link.service`. Stop the service while editing VIA. No new Python
+dependency, USB interface, or host command is needed.
+
+### If major/minor seems unchanged
+
+The switch is the **last left thumb, immediately right of sustain** (`K36`,
+normally the Browse/Space thumb). The left knob press (`K32`) was mistakenly
+used previously; that binding has been moved to K36. It changes future bottom-row chords only; piano rows
+and notes already held or sustained keep their pitches.
+
+1. In VIA, check MIDI layer 13: the last left thumb (matrix row 5, column 5) must be Any `0x7EA4`.
+   Clear the old left knob assignment if it still has that value.
+   Flashing alone may leave an old saved assignment. Stop the listener while
+   using VIA, then close VIA before restarting it.
+2. Run `host/.venv/bin/python host/qmk_link.py --listen`. Press that thumb once;
+   expect event `code=0x18 arg=0x01` for minor or `arg=0x00` for major, with
+   the corresponding text if using the current notification config.
+3. At root C with triads selected, release all keys and sustain. Play/release
+   the first bottom-row chord: major is C–E–G. Toggle the last left thumb and play
+   it again: minor is C–Eb–G. In a MIDI monitor, its third changes 64 -> 63.
+
+Tests confirm the handler toggles once on press and emits this event, and the
+chord pitches follow the setting. The user's physical binding/host state is
+not observable here. If event 0x18 is absent, check firmware and VIA mapping;
+if it arrives but the piano row sounds unchanged, that is expected behavior.
+
+For dual sustain, test left only, right only, and both: pressing a second pedal
+should not send another CC 64=127, and releasing just one while the other is
+held must not send CC 64=0. Exiting MIDI must clear both keys immediately.
